@@ -1,0 +1,75 @@
+name: 'Publish android image'
+
+inputs:
+  features:
+    description: 'Space separated list of features to run during test'
+    default: 'general_test aries pool_tests agency_v2'
+  docker-agency-imgname:
+    description: 'Name of agency image'
+  docker-libvcx-cachekey:
+    description: 'Cache key under which the libvcx image is stored'
+    required: true
+  docker-pool-cachekey:
+    description: 'Cache key under which the pool image is stored'
+
+env:
+  DOCKER_BUILDKIT: 1
+
+runs:
+  using: "composite"
+  steps:
+    - name: Load libvcx image cache
+      id: load-cached-libvcx-image
+      uses: actions/cache@v2
+      with:
+        path: /tmp/imgcache
+        key: ${{ inputs.docker-libvcx-cachekey }}
+    - name: If no cached image libvcx found
+      if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+      run: echo "ERROR == Expected to find libvcx image in cache ${{ inputs.docker-libvcx-cachekey }}"; exit -1
+    - name: Load image from cache
+      run: docker load < /tmp/imgcache/img_libvcx.rar
+
+    - name: Load indy-pool image
+      id: load-cached-pool-image
+      uses: actions/cache@v2
+      with:
+        path: /tmp/imgcache
+        key: ${{ inputs.docker-pool-cachekey }}
+    - name: If no cached image pool found
+      if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
+      run: echo "Tests will be run without pool."
+    - name: Load image from cache
+      run: docker load < /tmp/imgcache/img_indypool.rar
+
+    - name: Login to docker
+      uses: azure/docker-login@v1
+      with:
+        login-server: docker.pkg.github.com
+        username: $GITHUB_ACTOR
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Start optional services
+      run: |
+        set -x
+        docker images
+        if [ -z "${{ inputs.docker-pool-cachekey }}" ] then
+          docker run --rm -d --name indypool --network host indypool:${{ inputs.docker-pool-cachekey }}
+        else
+          echo "Indy pool image cachekey was not provided, pool won't be started."
+        fi;
+
+        if [ -z "${{ inputs.docker-agency-imgname }}" ] then
+          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
+          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env ${{ inputs.docker-agency-imgname }}
+        else
+          echo "Agency image was not provided, agency won't be started."
+        fi;
+
+    - name: Run tests
+      run: |
+        set -x
+        docker run --rm -i --name libvcx --network host libvcx:${{ inputs.docker-libvcx-cachekey }} \
+                            bash -c '(cd $HOME/libvcx && \
+                              RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "${{ inputs.features }}")'
+      shell: bash

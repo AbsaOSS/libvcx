@@ -404,58 +404,20 @@ jobs:
           echo ::set-env name=DOCKER_IMG_NAME_POOL::$(echo ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL}})
           echo ::set-env name=DOCKER_IMG_NAME_AGENCY::$(echo ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY}})
           echo ::set-env name=DOCKER_IMG_NAME_LIBVCX::$(echo ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}})
-      - name: Load indy-pool image
-        id: load-cached-pool-image
-        uses: actions/cache@v2
+
+      - name:  Run quick libvcx unit tests
+        uses: ./.github/actions/test-libvcx
         with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_POOL }}
-      - name: If no cached image found
-        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_indypool.rar
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Login to docker
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run quick unit tests
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(cd $HOME/libvcx && \
-                                RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "general_test aries")'
-
-      - name: Start services for integration tests
-        run: |
-          set -x
-          docker images
-          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
-          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
-          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
+          features: "general_test aries"
+          docker-libvcx-cachekey: "$CACHE_KEY_LIBVCX"
 
       - name: Run integration tests
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(cd $HOME/libvcx && \
-                                RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "pool_tests agency_v2")'
+        uses: ./.github/actions/test-libvcx
+        with:
+          features: "general_test aries"
+          docker-libvcx-cachekey: "$CACHE_KEY_LIBVCX"
+          docker-agency-imgname: "$DOCKER_IMG_NAME_AGENCY"
+          docker-pool-cachekey: "$CACHE_KEY_POOL"
 
   test-android-build:
     runs-on: ubuntu-16.04
