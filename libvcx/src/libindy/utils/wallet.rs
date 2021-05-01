@@ -74,8 +74,10 @@ pub fn reset_wallet_handle() {
 }
 
 pub fn create_wallet_from_config(config: &str) -> VcxResult<()> {
+    trace!("create_wallet_from_config >>> config: {}", config);
     let config: WalletConfig = serde_json::from_str(config)
         .map_err(|err| VcxError::from_msg(VcxErrorKind::InvalidJson, format!("Cannot deserialize WalletConfig {:?}, err: {:?}", config, err)))?;
+    trace!("create_wallet_from_config >>> parsed config: {:?}", config);
 
     let wh = create_and_open_as_main_wallet(
         &config.wallet_name,

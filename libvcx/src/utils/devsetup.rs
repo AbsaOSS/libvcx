@@ -20,6 +20,7 @@ use crate::utils::file::write_file;
 use crate::utils::logger::LibvcxDefaultLogger;
 use crate::utils::object_cache::ObjectCache;
 use crate::utils::plugins::init_plugin;
+use crate::utils::provision;
 
 pub struct SetupEmpty; // clears settings, setups up logging
 
@@ -461,50 +462,62 @@ pub fn setup_agency_env(use_zero_fees: bool) {
     let enterprise_wallet_name = format!("{}_{}", constants::ENTERPRISE_PREFIX, settings::DEFAULT_WALLET_NAME);
 
     let seed1 = create_new_seed();
-    let config = json!({
-            "agency_url": AGENCY_ENDPOINT.to_string(),
-            "agency_did": AGENCY_DID.to_string(),
-            "agency_verkey": AGENCY_VERKEY.to_string(),
-            "wallet_name": enterprise_wallet_name,
-            "wallet_key": settings::DEFAULT_WALLET_KEY.to_string(),
-            "wallet_key_derivation": settings::WALLET_KDF_RAW,
-            "enterprise_seed": seed1,
-            "agent_seed": seed1,
-            "name": "institution".to_string(),
-            "logo": "http://www.logo.com".to_string(),
-            "path": constants::GENESIS_PATH.to_string()
-        });
 
-    debug!("setup_agency_env >> Going to provision enterprise using config: {:?}", &config);
-    let enterprise_config = utils::provision::connect_register_provision(&config.to_string()).unwrap();
+    let wallet_config = json!({
+        "wallet_name": enterprise_wallet_name,
+        "wallet_key": settings::DEFAULT_WALLET_KEY.to_string(),
+        "wallet_key_derivation": settings::WALLET_KDF_RAW,
+    }).to_string();
 
+    let agency_config = json!({
+        "agency_did": AGENCY_DID,
+        "agency_verkey": AGENCY_VERKEY,
+        "agency_endpoint": AGENCY_ENDPOINT,
+        "agent_seed": seed1,
+    }).to_string();
+
+    wallet::create_wallet_from_config(&wallet_config).unwrap();
+    let wallet_handle = wallet::open_wallet_directly(&wallet_config).unwrap();
+    let institution_config = wallet::configure_issuer_wallet(&seed1).unwrap();
+    let agency_config = provision::provision_cloud_agent(&agency_config).unwrap();
+
+    let enterprise_config = combine_configs(&wallet_config, &agency_config, Some(&institution_config), wallet_handle, Some("institution"), Some(constants::GENESIS_PATH));
+
+    debug!("setup_agency_env >> Provisioned enterprise config: {:?}", &enterprise_config);
     api::vcx::vcx_shutdown(false);
 
     let consumer_wallet_name = format!("{}_{}", constants::CONSUMER_PREFIX, settings::DEFAULT_WALLET_NAME);
     let seed2 = create_new_seed();
-    let config = json!({
-            "agency_url": C_AGENCY_ENDPOINT.to_string(),
-            "agency_did": C_AGENCY_DID.to_string(),
-            "agency_verkey": C_AGENCY_VERKEY.to_string(),
-            "wallet_name": consumer_wallet_name,
-            "wallet_key": settings::DEFAULT_WALLET_KEY.to_string(),
-            "wallet_key_derivation": settings::WALLET_KDF_RAW.to_string(),
-            "enterprise_seed": seed2,
-            "agent_seed": seed2,
-            "name": "consumer".to_string(),
-            "logo": "http://www.logo.com".to_string(),
-            "path": constants::GENESIS_PATH.to_string()
-        });
 
-    debug!("setup_agency_env >> Going to provision consumer using config: {:?}", &config);
-    let consumer_config = utils::provision::connect_register_provision(&config.to_string()).unwrap();
+    let wallet_config = json!({
+        "wallet_name": consumer_wallet_name,
+        "wallet_key": settings::DEFAULT_WALLET_KEY.to_string(),
+        "wallet_key_derivation": settings::WALLET_KDF_RAW,
+    }).to_string();
+
+    let agency_config = json!({
+        "agency_did": C_AGENCY_DID,
+        "agency_verkey": C_AGENCY_VERKEY,
+        "agency_endpoint": C_AGENCY_ENDPOINT,
+        "agent_seed": seed2,
+    }).to_string();
+
+    wallet::create_wallet_from_config(&wallet_config).unwrap();
+    let wallet_handle = wallet::open_wallet_directly(&wallet_config).unwrap();
+    let institution_config = wallet::configure_issuer_wallet(&seed2).unwrap();
+    let agency_config = provision::provision_cloud_agent(&agency_config).unwrap();
+
+    let consumer_config = combine_configs(&wallet_config, &agency_config, Some(&institution_config), wallet_handle, Some("consumer"), Some(constants::GENESIS_PATH));
+
+    debug!("setup_agency_env >> Provisioned consumer config: {:?}", &consumer_config);
 
     unsafe {
-        INSTITUTION_CONFIG = CONFIG_STRING.add(config_with_wallet_handle(&enterprise_wallet_name, &enterprise_config)).unwrap();
+        INSTITUTION_CONFIG = CONFIG_STRING.add(enterprise_config).unwrap();
     }
     unsafe {
-        CONSUMER_CONFIG = CONFIG_STRING.add(config_with_wallet_handle(&consumer_wallet_name, &consumer_config.to_string())).unwrap();
+        CONSUMER_CONFIG = CONFIG_STRING.add(consumer_config).unwrap();
     }
+
     settings::set_config_value(settings::CONFIG_GENESIS_PATH, utils::get_temp_dir_path(settings::DEFAULT_GENESIS_PATH).to_str().unwrap());
     open_test_pool();
 
@@ -515,7 +528,7 @@ pub fn setup_agency_env(use_zero_fees: bool) {
     libindy::utils::payments::tests::token_setup(None, None, use_zero_fees);
 }
 
-pub fn combine_configs(wallet_config: &str, agency_config: &str, institution_config: Option<&str>, wallet_handle: WalletHandle, institution_name: Option<&str>) -> String {
+pub fn combine_configs(wallet_config: &str, agency_config: &str, institution_config: Option<&str>, wallet_handle: WalletHandle, institution_name: Option<&str>, genesis_path: Option<&str>) -> String {
     fn merge(a: &mut Value, b: &Value) {
         match (a, b) {
             (&mut Value::Object(ref mut a), &Value::Object(ref b)) => {
@@ -537,6 +550,10 @@ pub fn combine_configs(wallet_config: &str, agency_config: &str, institution_con
         let mut institution_config = serde_json::from_str::<serde_json::Value>(institution_config).unwrap();
         institution_config[settings::CONFIG_INSTITUTION_NAME] = json!(institution_name.expect("Specified institution config, but not institution_name").to_string());
         merge(&mut final_config, &institution_config);
+    }
+
+    if let Some(genesis_path) = genesis_path {
+        final_config[settings::CONFIG_GENESIS_PATH] = json!(genesis_path);
     }
     
     final_config[settings::CONFIG_WALLET_HANDLE] = json!(wallet_handle.0.to_string());

@@ -132,7 +132,7 @@ pub mod test {
             let institution_config = configure_issuer_wallet(enterprise_seed).unwrap();
             let agency_config = provision_cloud_agent(&agency_config).unwrap();
 
-            let config = combine_configs(&wallet_config, &agency_config, Some(&institution_config), wallet_handle, Some(institution_name));
+            let config = combine_configs(&wallet_config, &agency_config, Some(&institution_config), wallet_handle, Some(institution_name), None);
 
             Faber {
                 config,
@@ -321,7 +321,7 @@ pub mod test {
             let wallet_handle = open_wallet_directly(&wallet_config).unwrap();
             let agency_config = provision_cloud_agent(&agency_config).unwrap();
 
-            let config = combine_configs(&wallet_config, &agency_config, None, wallet_handle, None);
+            let config = combine_configs(&wallet_config, &agency_config, None, wallet_handle, None, None);
 
             Alice {
                 config,

@@ -214,13 +214,15 @@ mod tests {
     use std::env;
 
     use crate::api::vcx::vcx_shutdown;
-    use crate::utils::devsetup::{SetupDefaults, SetupMocks};
+    use crate::utils::devsetup::*;
+    use crate::libindy::utils::wallet::{create_wallet_from_config, open_wallet_directly};
 
     use super::*;
 
     #[test]
-    #[cfg(feature = "agency")]
+    #[cfg(feature = "agency_v2")]
     fn test_connect_register_provision_config_path() {
+        let _setup = SetupEmpty::init();
         let agency_did = "VsKV7grR1BUE29mG2Fm2kX";
         let agency_vk = "Hezce2UWMZ3wUhVkh2LfKSs8nDzWwzs2Win7EzNN3YaR";
         let host = "http://localhost:8080";
@@ -232,44 +234,64 @@ mod tests {
             "/tmp/custom1/".to_owned()
         };
 
-        let config = json!({
+        let wallet_config = json!({
             "wallet_name": "test_wallet",
+            "wallet_key": wallet_key.to_string(),
+            "wallet_key_derivation": settings::WALLET_KDF_ARGON2I_INT,
             "storage_config": json!({
                 "path": path
             }).to_string(),
-            "agency_url": host.to_string(),
+        }).to_string();
+
+        let agency_config = json!({
+            "agency_endpoint": host.to_string(),
             "agency_did": agency_did.to_string(),
             "agency_verkey": agency_vk.to_string(),
-            "wallet_key": wallet_key.to_string(),
-        });
+        }).to_string();
+
+        create_wallet_from_config(&wallet_config).unwrap();
+        let wallet_handle = open_wallet_directly(&wallet_config).unwrap();
+        let agency_config = provision_cloud_agent(&agency_config).unwrap();
+
+        let config = combine_configs(&wallet_config, &agency_config, None, wallet_handle, None);
 
         //Creates wallet at custom location
-        connect_register_provision(&config.to_string()).unwrap();
         assert!(std::path::Path::new(&(path + "test_wallet")).exists());
         vcx_shutdown(false);
-        let my_config: Config = serde_json::from_str(&config.to_string()).unwrap();
 
-        //Opens already created wallet at custom location
-        configure_wallet(&my_config).unwrap();
+        settings::process_config_string(&config, false).unwrap();
     }
 
+    // TODO: Setup mocks
     #[test]
+    #[ignore]
     #[cfg(feature = "general_test")]
     fn test_connect_register_provision() {
-        let _setup = SetupMocks::init();
+        let _setup = SetupEmpty::init();
 
         let agency_did = "Ab8TvZa3Q19VNkQVzAWVL7";
         let agency_vk = "5LXaR43B1aQyeh94VBP8LG1Sgvjk7aNfqiksBCSjwqbf";
-        let host = "http://www.whocares.org";
+        // let host = "http://www.whocares.org";
+        let host = "http://localhost:8080";
         let wallet_key = "test_key";
-        let config = json!({
-            "agency_url": host.to_string(),
+
+        let wallet_config = json!({
+            "wallet_name": "test_wallet",
+            "wallet_key": wallet_key.to_string(),
+            "wallet_key_derivation": settings::WALLET_KDF_ARGON2I_INT,
+        }).to_string();
+
+        let agency_config = json!({
+            "agency_endpoint": host.to_string(),
             "agency_did": agency_did.to_string(),
             "agency_verkey": agency_vk.to_string(),
-            "wallet_key": wallet_key.to_string()
-        });
+        }).to_string();
 
-        let result = connect_register_provision(&config.to_string()).unwrap();
+        create_wallet_from_config(&wallet_config).unwrap();
+        let wallet_handle = open_wallet_directly(&wallet_config).unwrap();
+        let agency_config = provision_cloud_agent(&agency_config).unwrap();
+
+        let config = combine_configs(&wallet_config, &agency_config, None, wallet_handle, None);
 
         let expected = json!({
             "agency_did":"Ab8TvZa3Q19VNkQVzAWVL7",
@@ -287,9 +309,10 @@ mod tests {
             "wallet_name":"LIBVCX_SDK_WALLET"
         });
 
-        assert_eq!(expected, ::serde_json::from_str::<serde_json::Value>(&result).unwrap());
+        assert_eq!(expected, ::serde_json::from_str::<serde_json::Value>(&config).unwrap());
     }
 
+    // TODO: Setup mocks
     #[ignore]
     #[test]
     #[cfg(feature = "general_test")]
