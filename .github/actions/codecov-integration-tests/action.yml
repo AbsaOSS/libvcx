@@ -35,7 +35,7 @@ runs:
           -e RUSTDOCFLAGS='-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests' \
           ${{ inputs.codecov-img-name }} \
           bash -c '(cd $HOME/aries-vcx/libvcx && \
-              cargo test --features "pool_tests agency_v2" && \
+              cargo test --features "pool_tests agency_tests" && \
               grcov ../target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ../target/debug/coverage.lcov)'
         docker_id=$(docker ps -a | grep libvcx-codecov-integration | grep Exited | tail -n 1 | cut -d ' ' -f 1)
         docker_image_id=$(docker images | grep codecov | perl -pe 's/\s+/ /g' | cut -d ' ' -f 3)

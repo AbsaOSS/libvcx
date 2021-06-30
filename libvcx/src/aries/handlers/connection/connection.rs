@@ -924,7 +924,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(feature = "agency_v2")]
+    #[cfg(feature = "agency_tests")]
     fn test_connection_send_works() {
         let _setup = SetupEmpty::init();
         let mut faber = Faber::setup();
@@ -1025,7 +1025,7 @@ pub mod tests {
         }
     }
 
-    #[cfg(feature = "agency_v2")]
+    #[cfg(feature = "agency_tests")]
     #[test]
     fn test_download_messages() {
         let _setup = SetupEmpty::init();
@@ -1058,7 +1058,7 @@ pub mod tests {
         assert_eq!(consumer1_reviewed_msgs.len(), 1);
     }
 
-    #[cfg(feature = "agency_v2")]
+    #[cfg(feature = "agency_tests")]
     #[test]
     fn test_update_agency_messages() {
         let _setup = SetupEmpty::init();

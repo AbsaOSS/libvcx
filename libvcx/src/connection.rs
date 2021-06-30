@@ -539,7 +539,7 @@ pub mod tests {
         assert_eq!(err.kind(), VcxErrorKind::NotReady);
     }
 
-    #[cfg(feature = "agency_v2")]
+    #[cfg(feature = "agency_tests")]
     #[test]
     fn test_download_messages_from_multiple_connections() {
         let _setup = SetupEmpty::init();
