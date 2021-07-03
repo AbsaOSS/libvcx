@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
-    "ffi-napi": "^2.4.7",
+    "ffi-napi": "^3.0.0",
     "fs-extra": "^4.0.2",
     "lodash": "^4.17.11",
     "mkdirp": "^1.0.4",
