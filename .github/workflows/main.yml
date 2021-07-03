@@ -3,9 +3,6 @@ name: CI
 on:
   push:
     branches:
-      - master
-  pull_request:
-    branches:
       - "**"
 
 jobs:
@@ -128,1004 +125,1040 @@ jobs:
           echo "::set-output name=DOCKER_IMG_NAME_CODECOV::codecov:$CODECOV_HASH"
           echo "::set-output name=DOCKER_IMG_NAME_POOL::indypool:$POOL_HASH"
 
-  build-image-indypool:
-    needs: workflow-setup
+#  build-image-indypool:
+#    needs: workflow-setup
+#    runs-on: ubuntu-latest
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_POOL: ${{ needs.workflow-setup.outputs.CACHE_KEY_POOL }}
+#      DOCKER_IMG_NAME_POOL: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Try load from cache.
+#        id: cache-image-pool
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_POOL }}
+#
+#      - name: Docker Login
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: If NOT found in cache, build and cache image.
+#        if: steps.cache-image-pool.outputs.cache-hit != 'true'
+#        run: |
+#          set -x
+#          docker build -t "$DOCKER_IMG_NAME_POOL" -f ci/indy-pool.dockerfile ci
+#          mkdir -p /tmp/imgcache
+#          docker save "$DOCKER_IMG_NAME_POOL" > /tmp/imgcache/img_indypool.rar
+#
+#      - name: Load image from cache
+#        run: |
+#          docker load < /tmp/imgcache/img_indypool.rar
+#      - name: Verify indypool image was loaded
+#        run: |
+#          docker images
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_POOL" || { echo "Image $DOCKER_IMG_NAME_POOL was not found!" ; exit 1; }
+#
+#  build-image-alpine-core:
+#    needs: workflow-setup
+#    runs-on: ubuntu-latest
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_ALPINE_CORE: ${{ needs.workflow-setup.outputs.CACHE_KEY_ALPINE_CORE }}
+#      DOCKER_IMG_NAME_ALPINE_CORE: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ALPINE_CORE }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Try load from cache.
+#        id: cache-image-alpinecore
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache_alpine_core
+#          key: ${{ env.CACHE_KEY_ALPINE_CORE }}
+#      - name: If NOT found in cache, build and cache image.
+#        if: steps.cache-image-alpinecore.outputs.cache-hit != 'true'
+#        run: |
+#          set -x
+#          docker build --build-arg "USER_ID=$UID" \
+#                       -f ci/alpine_core.dockerfile \
+#                       -t "$DOCKER_IMG_NAME_ALPINE_CORE" \
+#                        .
+#          mkdir -p /tmp/imgcache_alpine_core
+#          docker save "$DOCKER_IMG_NAME_ALPINE_CORE" > /tmp/imgcache_alpine_core/img_alpine_core.rar
+#
+#      - name: Load alpine_core image from cache
+#        run: |
+#          docker load < /tmp/imgcache_alpine_core/img_alpine_core.rar
+#      - name: Verify alpine_core image was loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_ALPINE_CORE" || { echo "Image $DOCKER_IMG_NAME_ALPINE_CORE was not found!" ; exit 1; }
+#
+#  build-image-libvcx:
+#    needs: [workflow-setup, build-image-alpine-core]
+#    runs-on: ubuntu-latest
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_LIBVCX: ${{ needs.workflow-setup.outputs.CACHE_KEY_LIBVCX }}
+#      DOCKER_IMG_NAME_LIBVCX: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX }}
+#      CACHE_KEY_ALPINE_CORE: ${{ needs.workflow-setup.outputs.CACHE_KEY_ALPINE_CORE }}
+#      DOCKER_IMG_NAME_ALPINE_CORE: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ALPINE_CORE }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Try load from cache.
+#        id: cache-image-alpinecore
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache_alpine_core
+#          key: ${{ env.CACHE_KEY_ALPINE_CORE }}
+#      - name: If alpine_core NOT found in cache, error
+#        if: steps.cache-image-alpinecore.outputs.cache-hit != 'true'
+#        run: exit -1
+#      - name: Load alpine_core image from cache
+#        run: |
+#          docker load < /tmp/imgcache_alpine_core/img_alpine_core.rar
+#          rm /tmp/imgcache_alpine_core/img_alpine_core.rar
+#      - name: Try load from cache.
+#        id: cache-image-libvcx
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If NOT found in cache, build and cache image.
+#        if: steps.cache-image-libvcx.outputs.cache-hit != 'true'
+#        run: |
+#          set -x
+#          docker build --build-arg "ALPINE_CORE_IMAGE=$DOCKER_IMG_NAME_ALPINE_CORE" \
+#                       -f ci/libvcx.dockerfile \
+#                       -t "$DOCKER_IMG_NAME_LIBVCX" \
+#                        .
+#          mkdir -p /tmp/imgcache
+#          docker save "$DOCKER_IMG_NAME_LIBVCX" > /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Load libvcx image from cache
+#        run: |
+#          docker load < /tmp/imgcache/img_libvcx.rar
+#      - name: Verify libvcx image was loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
+#
+#  build-image-codecov:
+#    needs: workflow-setup
+#    runs-on: ubuntu-latest
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_CODECOV: ${{ needs.workflow-setup.outputs.CACHE_KEY_CODECOV }}
+#      DOCKER_IMG_NAME_CODECOV: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Try load from cache.
+#        id: cache-image-codecov
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_CODECOV }}
+#      - name: If NOT found in cache, build and cache image.
+#        if: steps.cache-image-codecov.outputs.cache-hit != 'true'
+#        run: |
+#          set -x
+#          docker build -f ci/libvcx-ubuntu.dockerfile \
+#                       -t "$DOCKER_IMG_NAME_CODECOV" \
+#                        .
+#          mkdir -p /tmp/imgcache
+#          docker save "$DOCKER_IMG_NAME_CODECOV" > /tmp/imgcache/img_codecov.rar
+#
+#      - name: Load codecov image from cache
+#        run: |
+#          docker load < /tmp/imgcache/img_codecov.rar
+#      - name: Verify codecov image was loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_CODECOV" || { echo "Image $DOCKER_IMG_NAME_CODECOV was not found!" ; exit 1; }
+#
+#  code-coverage-unit-tests:
+#    runs-on: ubuntu-latest
+#    needs: [workflow-setup, build-image-codecov]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_CODECOV: ${{ needs.workflow-setup.outputs.CACHE_KEY_CODECOV }}
+#      DOCKER_IMG_NAME_CODECOV: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load codecov image cache
+#        id: load-cached-codecov-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_CODECOV }}
+#      - name: If no cached image found
+#        if: steps.load-cached-codecov-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_CODECOV"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_codecov.rar
+#
+#      - run: mkdir -p /tmp/artifacts/coverage
+#
+#      - name: Run quick unit tests
+#        uses: ./.github/actions/codecov-unit-tests
+#        with:
+#          docker-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
+#          cov-file-path: libvcx/coverage.lcov
+#
+#      - name: Upload coverage to Codecov
+#        uses: codecov/codecov-action@v1
+#        with:
+#          file: libvcx/coverage.lcov
+#          flags: unittests
+#          name: codecov-unit-tests
+#          fail_ci_if_error: true
+#          path_to_write_report: /tmp/artifacts/coverage/codecov_report.gz
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: code-coverage-report-unit-tests
+#          path: /tmp/artifacts/coverage
+#
+#  code-coverage-integration-tests:
+#    runs-on: ubuntu-latest
+#    needs: [workflow-setup, build-image-codecov, build-image-indypool]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_POOL: ${{ needs.workflow-setup.outputs.CACHE_KEY_POOL }}
+#      CACHE_KEY_CODECOV: ${{ needs.workflow-setup.outputs.CACHE_KEY_CODECOV }}
+#      DOCKER_IMG_NAME_POOL: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
+#      DOCKER_IMG_NAME_AGENCY: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY }}
+#      DOCKER_IMG_NAME_CODECOV: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load indy-pool image
+#        id: load-cached-pool-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_POOL }}
+#      - name: If no cached image found
+#        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_indypool.rar
+#
+#      - name: Load codecov image cache
+#        id: load-cached-codecov-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_CODECOV }}
+#      - name: If no cached image found
+#        if: steps.load-cached-codecov-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_CODECOV"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_codecov.rar
+#
+#      - name: Login to docker
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - run: mkdir -p /tmp/artifacts/coverage
+#
+#      - name: Run integration tests
+#        uses: ./.github/actions/codecov-integration-tests
+#        with:
+#          codecov-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
+#          pool-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
+#          agency-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY }}
+#          cov-file-path: /tmp/artifacts/coverage
+#
+#      - name: Upload coverage to Codecov
+#        uses: codecov/codecov-action@v1
+#        with:
+#          directory: /tmp/artifacts/coverage
+#          flags: integration
+#          name: codecov-integration-tests
+#          fail_ci_if_error: true
+#          path_to_write_report: /tmp/artifacts/coverage/codecov_report.gz
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: code-coverage-report-integration-tests
+#          path: /tmp/artifacts/coverage
+#
+#  build-image-android:
+#    needs: workflow-setup
+#    runs-on: ubuntu-latest
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_ANDROID: ${{needs.workflow-setup.outputs.CACHE_KEY_ANDROID}}
+#      DOCKER_IMG_NAME_ANDROID: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Try loading android image from cache.
+#        id: cache-image-android
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_ANDROID }}
+#      - name: If NOT found in cache, build and cache image.
+#        if: steps.cache-image-android.outputs.cache-hit != 'true'
+#        run: |
+#          docker build -f wrappers/java/ci/android.dockerfile \
+#                       -t "$DOCKER_IMG_NAME_ANDROID" \
+#                        .
+#          mkdir -p /tmp/imgcache
+#          docker save "$DOCKER_IMG_NAME_ANDROID" > /tmp/imgcache/img_android.rar
+#
+#      - name: Load android image from cache
+#        run: |
+#          docker load < /tmp/imgcache/img_android.rar
+#      - name: Verify android image was loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_ANDROID" || { echo "Image $DOCKER_IMG_NAME_ANDROID was not found!" ; exit 1; }
+
+  publish-crates-nonrelease:
     runs-on: ubuntu-latest
+    if: ${{ needs.workflow-setup.outputs.RELEASE != 'true' && needs.workflow-setup.outputs.PRERELEASE != 'true' }}
+    needs: [workflow-setup]
     env:
       DOCKER_BUILDKIT: 1
-      CACHE_KEY_POOL: ${{ needs.workflow-setup.outputs.CACHE_KEY_POOL }}
-      DOCKER_IMG_NAME_POOL: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Try load from cache.
-        id: cache-image-pool
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_POOL }}
-
-      - name: Docker Login
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: If NOT found in cache, build and cache image.
-        if: steps.cache-image-pool.outputs.cache-hit != 'true'
-        run: |
-          set -x
-          docker build -t "$DOCKER_IMG_NAME_POOL" -f ci/indy-pool.dockerfile ci
-          mkdir -p /tmp/imgcache
-          docker save "$DOCKER_IMG_NAME_POOL" > /tmp/imgcache/img_indypool.rar
-
-      - name: Load image from cache
-        run: |
-          docker load < /tmp/imgcache/img_indypool.rar
-      - name: Verify indypool image was loaded
-        run: |
-          docker images
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_POOL" || { echo "Image $DOCKER_IMG_NAME_POOL was not found!" ; exit 1; }
-
-  build-image-alpine-core:
-    needs: workflow-setup
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_ALPINE_CORE: ${{ needs.workflow-setup.outputs.CACHE_KEY_ALPINE_CORE }}
-      DOCKER_IMG_NAME_ALPINE_CORE: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ALPINE_CORE }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Try load from cache.
-        id: cache-image-alpinecore
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache_alpine_core
-          key: ${{ env.CACHE_KEY_ALPINE_CORE }}
-      - name: If NOT found in cache, build and cache image.
-        if: steps.cache-image-alpinecore.outputs.cache-hit != 'true'
-        run: |
-          set -x
-          docker build --build-arg "USER_ID=$UID" \
-                       -f ci/alpine_core.dockerfile \
-                       -t "$DOCKER_IMG_NAME_ALPINE_CORE" \
-                        .
-          mkdir -p /tmp/imgcache_alpine_core
-          docker save "$DOCKER_IMG_NAME_ALPINE_CORE" > /tmp/imgcache_alpine_core/img_alpine_core.rar
-
-      - name: Load alpine_core image from cache
-        run: |
-          docker load < /tmp/imgcache_alpine_core/img_alpine_core.rar
-      - name: Verify alpine_core image was loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_ALPINE_CORE" || { echo "Image $DOCKER_IMG_NAME_ALPINE_CORE was not found!" ; exit 1; }
-
-  build-image-libvcx:
-    needs: [workflow-setup, build-image-alpine-core]
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_LIBVCX: ${{ needs.workflow-setup.outputs.CACHE_KEY_LIBVCX }}
-      DOCKER_IMG_NAME_LIBVCX: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX }}
-      CACHE_KEY_ALPINE_CORE: ${{ needs.workflow-setup.outputs.CACHE_KEY_ALPINE_CORE }}
-      DOCKER_IMG_NAME_ALPINE_CORE: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ALPINE_CORE }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Try load from cache.
-        id: cache-image-alpinecore
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache_alpine_core
-          key: ${{ env.CACHE_KEY_ALPINE_CORE }}
-      - name: If alpine_core NOT found in cache, error
-        if: steps.cache-image-alpinecore.outputs.cache-hit != 'true'
-        run: exit -1
-      - name: Load alpine_core image from cache
-        run: |
-          docker load < /tmp/imgcache_alpine_core/img_alpine_core.rar
-          rm /tmp/imgcache_alpine_core/img_alpine_core.rar
-      - name: Try load from cache.
-        id: cache-image-libvcx
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If NOT found in cache, build and cache image.
-        if: steps.cache-image-libvcx.outputs.cache-hit != 'true'
-        run: |
-          set -x
-          docker build --build-arg "ALPINE_CORE_IMAGE=$DOCKER_IMG_NAME_ALPINE_CORE" \
-                       -f ci/libvcx.dockerfile \
-                       -t "$DOCKER_IMG_NAME_LIBVCX" \
-                        .
-          mkdir -p /tmp/imgcache
-          docker save "$DOCKER_IMG_NAME_LIBVCX" > /tmp/imgcache/img_libvcx.rar
-
-      - name: Load libvcx image from cache
-        run: |
-          docker load < /tmp/imgcache/img_libvcx.rar
-      - name: Verify libvcx image was loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
-
-  build-image-codecov:
-    needs: workflow-setup
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_CODECOV: ${{ needs.workflow-setup.outputs.CACHE_KEY_CODECOV }}
-      DOCKER_IMG_NAME_CODECOV: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Try load from cache.
-        id: cache-image-codecov
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_CODECOV }}
-      - name: If NOT found in cache, build and cache image.
-        if: steps.cache-image-codecov.outputs.cache-hit != 'true'
-        run: |
-          set -x
-          docker build -f ci/libvcx-ubuntu.dockerfile \
-                       -t "$DOCKER_IMG_NAME_CODECOV" \
-                        .
-          mkdir -p /tmp/imgcache
-          docker save "$DOCKER_IMG_NAME_CODECOV" > /tmp/imgcache/img_codecov.rar
-
-      - name: Load codecov image from cache
-        run: |
-          docker load < /tmp/imgcache/img_codecov.rar
-      - name: Verify codecov image was loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_CODECOV" || { echo "Image $DOCKER_IMG_NAME_CODECOV was not found!" ; exit 1; }
-
-  code-coverage-unit-tests:
-    runs-on: ubuntu-latest
-    needs: [workflow-setup, build-image-codecov]
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_CODECOV: ${{ needs.workflow-setup.outputs.CACHE_KEY_CODECOV }}
-      DOCKER_IMG_NAME_CODECOV: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load codecov image cache
-        id: load-cached-codecov-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_CODECOV }}
-      - name: If no cached image found
-        if: steps.load-cached-codecov-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_CODECOV"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_codecov.rar
-
-      - run: mkdir -p /tmp/artifacts/coverage
-
-      - name: Run quick unit tests
-        uses: ./.github/actions/codecov-unit-tests
-        with:
-          docker-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
-          cov-file-path: libvcx/coverage.lcov
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          file: libvcx/coverage.lcov
-          flags: unittests
-          name: codecov-unit-tests
-          fail_ci_if_error: true
-          path_to_write_report: /tmp/artifacts/coverage/codecov_report.gz
-      - uses: actions/upload-artifact@v2
-        with:
-          name: code-coverage-report-unit-tests
-          path: /tmp/artifacts/coverage
-
-  code-coverage-integration-tests:
-    runs-on: ubuntu-latest
-    needs: [workflow-setup, build-image-codecov, build-image-indypool]
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_POOL: ${{ needs.workflow-setup.outputs.CACHE_KEY_POOL }}
-      CACHE_KEY_CODECOV: ${{ needs.workflow-setup.outputs.CACHE_KEY_CODECOV }}
-      DOCKER_IMG_NAME_POOL: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
-      DOCKER_IMG_NAME_AGENCY: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY }}
-      DOCKER_IMG_NAME_CODECOV: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load indy-pool image
-        id: load-cached-pool-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_POOL }}
-      - name: If no cached image found
-        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_indypool.rar
-
-      - name: Load codecov image cache
-        id: load-cached-codecov-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_CODECOV }}
-      - name: If no cached image found
-        if: steps.load-cached-codecov-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_CODECOV"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_codecov.rar
-
-      - name: Login to docker
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - run: mkdir -p /tmp/artifacts/coverage
-
-      - name: Run integration tests
-        uses: ./.github/actions/codecov-integration-tests
-        with:
-          codecov-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_CODECOV }}
-          pool-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
-          agency-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY }}
-          cov-file-path: /tmp/artifacts/coverage
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          directory: /tmp/artifacts/coverage
-          flags: integration
-          name: codecov-integration-tests
-          fail_ci_if_error: true
-          path_to_write_report: /tmp/artifacts/coverage/codecov_report.gz
-      - uses: actions/upload-artifact@v2
-        with:
-          name: code-coverage-report-integration-tests
-          path: /tmp/artifacts/coverage
-
-  build-image-android:
-    needs: workflow-setup
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_ANDROID: ${{needs.workflow-setup.outputs.CACHE_KEY_ANDROID}}
-      DOCKER_IMG_NAME_ANDROID: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Try loading android image from cache.
-        id: cache-image-android
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_ANDROID }}
-      - name: If NOT found in cache, build and cache image.
-        if: steps.cache-image-android.outputs.cache-hit != 'true'
-        run: |
-          docker build -f wrappers/java/ci/android.dockerfile \
-                       -t "$DOCKER_IMG_NAME_ANDROID" \
-                        .
-          mkdir -p /tmp/imgcache
-          docker save "$DOCKER_IMG_NAME_ANDROID" > /tmp/imgcache/img_android.rar
-
-      - name: Load android image from cache
-        run: |
-          docker load < /tmp/imgcache/img_android.rar
-      - name: Verify android image was loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_ANDROID" || { echo "Image $DOCKER_IMG_NAME_ANDROID was not found!" ; exit 1; }
-
-  test-libvcx-image-general_test:
-    runs-on: ubuntu-latest
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_LIBVCX: ${{ needs.workflow-setup.outputs.CACHE_KEY_LIBVCX }}
-      DOCKER_IMG_NAME_LIBVCX: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Run quick unit tests
-        run: |
-          set -x
-          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(cd $HOME/libvcx && \
-                                RUST_TEST_THREADS=1 cargo test --release --features "general_test" && \
-                                cd $HOME/agency_client && \
-                                RUST_TEST_THREADS=1 cargo test --release --features "general_test")'
-
-  test-libvcx-image-pool_tests:
-    runs-on: ubuntu-latest
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_POOL: ${{needs.workflow-setup.outputs.CACHE_KEY_POOL}}
-      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
-      DOCKER_IMG_NAME_POOL: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL}}
-      DOCKER_IMG_NAME_AGENCY: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY}}
-      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load indy-pool image
-        id: load-cached-pool-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_POOL }}
-      - name: If no cached image found
-        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_indypool.rar
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Login to docker
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Start services for integration tests
-        run: |
-          set -x
-          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
-          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
-          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
-
-      - name: Run pool integration tests
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(cd $HOME/libvcx && \
-                              RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "pool_tests agency_v2")'
-
-  test-libvcx-image-agency_pool_tests:
-    runs-on: ubuntu-latest
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
-    env:
-      DOCKER_BUILDKIT: 1
-      CACHE_KEY_POOL: ${{needs.workflow-setup.outputs.CACHE_KEY_POOL}}
-      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
-      DOCKER_IMG_NAME_POOL: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL}}
-      DOCKER_IMG_NAME_AGENCY: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY}}
-      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load indy-pool image
-        id: load-cached-pool-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_POOL }}
-      - name: If no cached image found
-        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_indypool.rar
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Login to docker
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Start services for integration tests
-        run: |
-          set -x
-          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
-          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
-          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
-
-      - name: Run agency+pool integration tests
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(cd $HOME/libvcx && \
-                              cargo --version && \
-                              rustc --version && \
-                              RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "agency_pool_tests")'
-
-  test-android-build:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-android]
-    env:
-      DOCKER_BUILDKIT: 1
-      DOCKER_IMG_NAME_ANDROID: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID}}
-      CACHE_KEY_ANDROID: ${{needs.workflow-setup.outputs.CACHE_KEY_ANDROID}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load android image cache
-        id: load-cached-android-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_ANDROID }}
-      - name: If no cached image found
-        if: steps.load-cached-android-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_ANDROID"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_android.rar
-      - name: Run android tests
-        run: |
-          rm -rf /tmp/imgcache
-          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -i --name test-android-build $DOCKER_IMG_NAME_ANDROID \
-                              bash -c '(cd $HOME/aries-vcx && ./wrappers/java/ci/android.test.sh armv7)'
-
-  test-node-wrapper:
-    runs-on: ubuntu-latest
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
-    env:
-      DOCKER_BUILDKIT: 1
-      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
-      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
-      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Run wrapper tests
-        run: |
-          set -x
-          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(
-                                cd $HOME/wrappers/node && \
-                                npm install && \
-                                npm run tscversion && \
-                                npm run compile && \
-                                npm run test)'
-
-  # TODO: Run in parallel once https://github.com/actions/runner/issues/646 is ready
-  test-integration-node-wrapper:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
-    env:
-      DOCKER_BUILDKIT: 1
-      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
-      CACHE_KEY_POOL: ${{ needs.workflow-setup.outputs.CACHE_KEY_POOL }}
-      CACHE_KEY_LIBVCX: ${{ needs.workflow-setup.outputs.CACHE_KEY_LIBVCX }}
-      DOCKER_IMG_NAME_POOL: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
-      DOCKER_IMG_NAME_AGENCY: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY }}
-      DOCKER_IMG_NAME_LIBVCX: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX }}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-      - name: Load indy-pool image
-        id: load-cached-pool-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_POOL }}
-      - name: If no cached image found
-        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_indypool.rar
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Login to docker
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Start services for integration tests
-        run: |
-          set -x
-          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
-          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
-          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
-
-      - name: Run wrapper demo 
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(
-                                cd $HOME/wrappers/node && npm install && npm run compile && \
-                                cd $HOME/agents/node/vcxagent-core && npm install && npm run demo)'
-
-      - name: Run wrapper demo with revocation
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(
-                                cd $HOME/wrappers/node && npm install && npm run compile && \
-                                cd $HOME/agents/node/vcxagent-core && npm install && npm run demo:revocation)'
-
-      - name: Run wrapper demo with legacy initialization
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(
-                                cd $HOME/wrappers/node && npm install && npm run compile && \
-                                cd $HOME/agents/node/vcxagent-core && npm install && npm run demo:legacy)'
-
-      - name: Run integration tests
-        run: |
-          set -x
-          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
-                              bash -c '(
-                                cd $HOME/wrappers/node && npm install && npm run compile && \
-                                cd $HOME/agents/node/vcxagent-core && npm install && \
-                                cd $HOME/agents/node/vcxagent-cli && npm install && \
-                                cd $HOME/agents/node/vcxagent-core && npm run test:integration)'
-
-  # TODO: Add tests of iOS build
-  publish-ios-wrapper:
-    needs: [workflow-setup, build-image-libvcx]
-    runs-on: macos-10.15
-    env:
-      LIBVCX_VERSION: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
       PUBLISH_VERSION: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
     steps:
-    - name: Git checkout
-      uses: actions/checkout@v2
-    - name: Switch to xcode version 11
-      run: |
-        sudo xcode-select --switch /Applications/Xcode_11.7.app/Contents/Developer
-        xcodebuild -version
-    - name: Build iOS wrapper
-      run: |
-          ./wrappers/ios/ci/build.sh
-    - uses: actions/upload-artifact@v2
-      with:
-        name: libvcx-ios-${{ env.PUBLISH_VERSION }}-device
-        path: /tmp/artifacts/libvcx-ios-${{ env.PUBLISH_VERSION }}-device.zip
-    - uses: actions/upload-artifact@v2
-      with:
-        name: libvcx-ios-${{ env.PUBLISH_VERSION }}-universal
-        path: /tmp/artifacts/libvcx-ios-${{ env.PUBLISH_VERSION }}-universal.zip
-
-  # test-android-wrapper:
-  #   runs-on: ubuntu-16.04
-  #   needs: [workflow-setup, build-image-android]
-  #   env:
-  #     DOCKER_BUILDKIT: 1
-  #     CACHE_KEY_ANDROID: ${{needs.workflow-setup.outputs.CACHE_KEY_ANDROID}}
-  #     DOCKER_IMG_NAME_ANDROID: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID}}
-  #   steps:
-  #     - name: Git checkout
-  #       uses: actions/checkout@v2
-
-  #     - name: Load android image cache
-  #       id: load-cached-android-image
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: /tmp/imgcache
-  #         key: ${{ env.CACHE_KEY_ANDROID }}
-  #     - name: If no cached image found
-  #       if: steps.load-cached-android-image.outputs.cache-hit != 'true'
-  #       run: echo "ERROR == Expected to find image from cache $CACHE_KEY_ANDROID"; exit -1
-  #     - name: Load android image from cache
-  #       run: docker load < /tmp/imgcache/img_android.rar
-
-  #     - name: Test android wrapper
-  #       run: |
-  #         # docker run --name test-android-wrapper -v $PWD:/home/indy/aries-vcx:rw $DOCKER_IMG_NAME_ANDROID \
-  #         docker run --name test-android-wrapper $DOCKER_IMG_NAME_ANDROID \
-  #                             bash -c '(cd $HOME/aries-vcx/libvcx && ./android.wrapper.test.sh x86)'
-
-  publish-android-wrapper-device:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-android]
-    env:
-      DOCKER_BUILDKIT: 1
-      FULL_VERSION_NAME: libvcx-android-${{needs.workflow-setup.outputs.PUBLISH_VERSION}}-device
-    steps:
       - name: Git checkout
         uses: actions/checkout@v2
-
-      - name: Load android image cache
-        id: load-cached-android-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ needs.workflow-setup.outputs.CACHE_KEY_ANDROID }}
-
-      - name: If no cached image found
-        if: steps.load-cached-android-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache"; exit -1
-
-      - name: Load android image from cache
+      - name: Version crates
         run: |
-          docker load < /tmp/imgcache/img_android.rar
-          rm -rf /tmp/imgcache
-
-      - name: Build, run android wrapper tests, and publish artifacts
-        uses: ./.github/actions/publish-android
-        with:
-          abis: "arm arm64"
-          docker-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID }}
-          full-version-name: ${{ env.FULL_VERSION_NAME }}
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.FULL_VERSION_NAME }}
-          path: /tmp/artifacts/aar/${{ env.FULL_VERSION_NAME }}.aar
-
-  publish-android-wrapper-emulator:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-android]
-    env:
-      DOCKER_BUILDKIT: 1
-      FULL_VERSION_NAME: libvcx-android-${{needs.workflow-setup.outputs.PUBLISH_VERSION}}-emulator
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Load android image cache
-        id: load-cached-android-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ needs.workflow-setup.outputs.CACHE_KEY_ANDROID }}
-
-      - name: If no cached image found
-        if: steps.load-cached-android-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache"; exit -1
-
-      - name: Load image from cache
+          ./ci/version.sh "$PUBLISH_VERSION"
+      - name: Publish crates
         run: |
-          docker load < /tmp/imgcache/img_android.rar
-          rm -rf /tmp/imgcache
+          cargo login ${{ secrets.CRATESIO_TOKEN_PATRIK }}
+          ./ci/publish.sh
 
-      - name: Build, run android wrapper tests, and publish artifacts
-        uses: ./.github/actions/publish-android
-        with:
-          abis: "x86 x86_64"
-          docker-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID }}
-          full-version-name: ${{ env.FULL_VERSION_NAME }}
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.FULL_VERSION_NAME }}
-          path: /tmp/artifacts/aar/${{ env.FULL_VERSION_NAME }}.aar
-
-  publish-libvcx:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
-    env:
-      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
-      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
-      PUBLISH_VERSION: ${{needs.workflow-setup.outputs.PUBLISH_VERSION}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Verify libvcx image were loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
-
-      - name: Docker Login
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish image
-        run: |
-          if [[ "$PUBLISH_VERSION" ]]
-          then
-            IFS=$':' read -a arr <<< $DOCKER_IMG_NAME_LIBVCX
-            DOCKER_IMG_NAME_TAGLESS=${arr[0]}
-            GITHUB_REPOSITORY_LOWERCASE=`echo $GITHUB_REPOSITORY | awk '{print tolower($0)}'`
-            REMOTE_DOCKER_IMG_NAME_LIBVCX="docker.pkg.github.com/${GITHUB_REPOSITORY_LOWERCASE}/${DOCKER_IMG_NAME_TAGLESS}:${PUBLISH_VERSION}"
-            echo "Releasing libvcx docker image version $PUBLISH_VERSION, tagged $REMOTE_DOCKER_IMG_NAME_LIBVCX"
-            docker tag "$DOCKER_IMG_NAME_LIBVCX" "$REMOTE_DOCKER_IMG_NAME_LIBVCX"
-            docker push "$REMOTE_DOCKER_IMG_NAME_LIBVCX" || true
-          else
-             echo "New version was not defined, skipping release."
-          fi
-
-  publish-node-wrapper:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-node-wrapper, test-integration-node-wrapper]
-    env:
-      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
-      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
-      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
-      PUBLISH_VERSION: ${{needs.workflow-setup.outputs.PUBLISH_VERSION}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Verify libvcx image were loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
-
-      - name: Docker Login
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Release wrapper
-        run: |
-          if [[ "$PUBLISH_VERSION" ]]
-          then
-            echo "Releasing node wrapper version $PUBLISH_VERSION..."
-            docker run --rm -i --name libvcx --network host \
-                   -e NPMJS_TOKEN="$NPMJS_TOKEN" \
-                   -e PUBLISH_VERSION="$PUBLISH_VERSION" \
-                    "$DOCKER_IMG_NAME_LIBVCX" bash -c '$HOME/wrappers/node/publish.sh'
-          else
-             echo "New version was not defined, skipping release."
-          fi
-
-  publish-agent-core:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-node-wrapper, test-integration-node-wrapper]
-    env:
-      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
-      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
-      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
-      PUBLISH_VERSION: ${{needs.workflow-setup.outputs.PUBLISH_VERSION}}
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Load libvcx image cache
-        id: load-cached-libvcx-image
-        uses: actions/cache@v2
-        with:
-          path: /tmp/imgcache
-          key: ${{ env.CACHE_KEY_LIBVCX }}
-      - name: If no cached image found
-        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
-        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
-      - name: Load image from cache
-        run: docker load < /tmp/imgcache/img_libvcx.rar
-
-      - name: Verify libvcx image were loaded
-        run: |
-          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
-      - name: Docker Login
-        uses: azure/docker-login@v1
-        with:
-          login-server: docker.pkg.github.com
-          username: $GITHUB_ACTOR
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Release agent-core package
-        run: |
-          if [[ "$PUBLISH_VERSION" ]]
-          then
-            echo "Releasing node wrapper version $PUBLISH_VERSION..."
-            docker run --rm -i --name libvcx --network host \
-                   -e NPMJS_TOKEN="$NPMJS_TOKEN" \
-                   -e PUBLISH_VERSION="$PUBLISH_VERSION" \
-                    "$DOCKER_IMG_NAME_LIBVCX" bash -c '$HOME/agents/node/vcxagent-core/publish.sh'
-          else
-             echo "New version was not defined, skipping release."
-          fi
-
-  make-release:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-android-build, test-node-wrapper, test-integration-node-wrapper]
+  publish-crates-release:
+    runs-on: ubuntu-latest
+    needs: [workflow-setup, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-android-build, test-node-wrapper, test-integration-node-wrapper]
     if: ${{ needs.workflow-setup.outputs.RELEASE == 'true' || needs.workflow-setup.outputs.PRERELEASE == 'true' }}
-    outputs:
-      RELEASE_UPLOAD_URL: ${{ steps.create-release.outputs.upload_url }}
+    env:
+      DOCKER_BUILDKIT: 1
+      PUBLISH_VERSION: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
+      - name: Version crates
+        run: |
+          ./ci/version.sh "$PUBLISH_VERSION"
+      - name: Publish crates
+        run: |
+          cargo login ${{ secrets.CRATESIO_TOKEN_PATRIK }}
+          ./ci/publish.sh
 
-      - name: Generate changelog
-        uses: heinrichreimer/github-changelog-generator-action@v2.2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          futureRelease: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
-          releaseBranch: master
-          pullRequests: true
-          unreleased: true
-          unreleasedOnly: true
-          issuesWoLabels: true
-          prWoLabels: true
-          stripGeneratorNotice: true
-          stripHeaders: false
-          maxIssues: 50
-          excludeLabels: duplicate,question,invalid,wontfix,changelog-excluded
-          breakingLabels: backwards-incompatible,breaking
-          deprecatedLabels: deprecated
-          headerLabel: "# Changelog"
-          breakingLabel: '### Breaking changes'
-          enhancementLabel: '### Enhancements'
-          bugsLabel: '### Bug fixes'
-          deprecatedLabel: '###  Deprecations'
-          removedLabel: '### Removals'
-          securityLabel: '### Security fixes'
-          issuesLabel: '### Other issues'
-          prLabel: '### Other pull requests'
-          addSections: '{"ci":{"prefix":"### CI changes","labels":["ci"]},"wrappers":{"prefix":"### Wrapper changes","labels":["wrappers"]}}'
-          excludeTagsRegex: '^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))+)?)$'
-
-      - name: Create a new release
-        id: create-release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
-          release_name: Release ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
-          body_path: ./CHANGELOG.md
-          draft: ${{ needs.workflow-setup.outputs.PRERELEASE == 'true' }}
-          prerelease: ${{ needs.workflow-setup.outputs.PRERELEASE == 'true' }}
-
-  release-android-device:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
-    steps:
-      - name: Fetch android device build from artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
-          asset_path: ./libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.aar
-          asset_name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.aar
-          asset_content_type: application/aar
-
-
-  release-android-emulator:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
-    steps:
-      - name: Fetch android emulator build from artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-emulator
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
-          asset_path: ./libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-emulator.aar
-          asset_name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-emulator.aar
-          asset_content_type: application/aar
-
-  release-ios-device:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
-    steps:
-      - name: Fetch iOS device build from artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
-          asset_path: ./libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.zip
-          asset_name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.zip
-          asset_content_type: application/zip
-
-  release-ios-universal:
-    runs-on: ubuntu-16.04
-    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
-    steps:
-      - name: Fetch iOS universal build from artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-universal
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
-          asset_path: ./libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-universal.zip
-          asset_name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-universal.zip
-          asset_content_type: application/zip
+#  test-libvcx-image-general_test:
+#    runs-on: ubuntu-latest
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_LIBVCX: ${{ needs.workflow-setup.outputs.CACHE_KEY_LIBVCX }}
+#      DOCKER_IMG_NAME_LIBVCX: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Run quick unit tests
+#        run: |
+#          set -x
+#          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
+#          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(cd $HOME/libvcx && \
+#                                RUST_TEST_THREADS=1 cargo test --release --features "general_test" && \
+#                                cd $HOME/agency_client && \
+#                                RUST_TEST_THREADS=1 cargo test --release --features "general_test")'
+#
+#  test-libvcx-image-pool_tests:
+#    runs-on: ubuntu-latest
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_POOL: ${{needs.workflow-setup.outputs.CACHE_KEY_POOL}}
+#      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
+#      DOCKER_IMG_NAME_POOL: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL}}
+#      DOCKER_IMG_NAME_AGENCY: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY}}
+#      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load indy-pool image
+#        id: load-cached-pool-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_POOL }}
+#      - name: If no cached image found
+#        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_indypool.rar
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Login to docker
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Start services for integration tests
+#        run: |
+#          set -x
+#          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
+#          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
+#          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
+#          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
+#
+#      - name: Run pool integration tests
+#        run: |
+#          set -x
+#          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(cd $HOME/libvcx && \
+#                              RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "pool_tests agency_v2")'
+#
+#  test-libvcx-image-agency_pool_tests:
+#    runs-on: ubuntu-latest
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      CACHE_KEY_POOL: ${{needs.workflow-setup.outputs.CACHE_KEY_POOL}}
+#      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
+#      DOCKER_IMG_NAME_POOL: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL}}
+#      DOCKER_IMG_NAME_AGENCY: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY}}
+#      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load indy-pool image
+#        id: load-cached-pool-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_POOL }}
+#      - name: If no cached image found
+#        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_indypool.rar
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Login to docker
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Start services for integration tests
+#        run: |
+#          set -x
+#          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
+#          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
+#          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
+#          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
+#
+#      - name: Run agency+pool integration tests
+#        run: |
+#          set -x
+#          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(cd $HOME/libvcx && \
+#                              cargo --version && \
+#                              rustc --version && \
+#                              RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "agency_pool_tests")'
+#
+#  test-android-build:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-android]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      DOCKER_IMG_NAME_ANDROID: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID}}
+#      CACHE_KEY_ANDROID: ${{needs.workflow-setup.outputs.CACHE_KEY_ANDROID}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load android image cache
+#        id: load-cached-android-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_ANDROID }}
+#      - name: If no cached image found
+#        if: steps.load-cached-android-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_ANDROID"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_android.rar
+#      - name: Run android tests
+#        run: |
+#          rm -rf /tmp/imgcache
+#          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
+#          docker run --rm -i --name test-android-build $DOCKER_IMG_NAME_ANDROID \
+#                              bash -c '(cd $HOME/aries-vcx && ./wrappers/java/ci/android.test.sh armv7)'
+#
+#  test-node-wrapper:
+#    runs-on: ubuntu-latest
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+#      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
+#      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Run wrapper tests
+#        run: |
+#          set -x
+#          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
+#          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(
+#                                cd $HOME/wrappers/node && \
+#                                npm install && \
+#                                npm run tscversion && \
+#                                npm run compile && \
+#                                npm run test)'
+#
+#  # TODO: Run in parallel once https://github.com/actions/runner/issues/646 is ready
+#  test-integration-node-wrapper:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+#      CACHE_KEY_POOL: ${{ needs.workflow-setup.outputs.CACHE_KEY_POOL }}
+#      CACHE_KEY_LIBVCX: ${{ needs.workflow-setup.outputs.CACHE_KEY_LIBVCX }}
+#      DOCKER_IMG_NAME_POOL: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_POOL }}
+#      DOCKER_IMG_NAME_AGENCY: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_AGENCY }}
+#      DOCKER_IMG_NAME_LIBVCX: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#      - name: Load indy-pool image
+#        id: load-cached-pool-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_POOL }}
+#      - name: If no cached image found
+#        if: steps.load-cached-pool-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_POOL"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_indypool.rar
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Login to docker
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Start services for integration tests
+#        run: |
+#          set -x
+#          sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
+#          docker run --rm -d --name indypool --network host $DOCKER_IMG_NAME_POOL
+#          docker run --rm -d --name postgres --network host -e POSTGRES_PASSWORD=mysecretpassword postgres:12.1
+#          docker run --rm -d --name vcxagency --network host --env-file ci/agency/localhost.env $DOCKER_IMG_NAME_AGENCY
+#
+#      - name: Run wrapper demo
+#        run: |
+#          set -x
+#          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(
+#                                cd $HOME/wrappers/node && npm install && npm run compile && \
+#                                cd $HOME/agents/node/vcxagent-core && npm install && npm run demo)'
+#
+#      - name: Run wrapper demo with revocation
+#        run: |
+#          set -x
+#          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(
+#                                cd $HOME/wrappers/node && npm install && npm run compile && \
+#                                cd $HOME/agents/node/vcxagent-core && npm install && npm run demo:revocation)'
+#
+#      - name: Run wrapper demo with legacy initialization
+#        run: |
+#          set -x
+#          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(
+#                                cd $HOME/wrappers/node && npm install && npm run compile && \
+#                                cd $HOME/agents/node/vcxagent-core && npm install && npm run demo:legacy)'
+#
+#      - name: Run integration tests
+#        run: |
+#          set -x
+#          docker run --rm -i --name libvcx --network host -e NPMJS_TOKEN=$NPMJS_TOKEN $DOCKER_IMG_NAME_LIBVCX \
+#                              bash -c '(
+#                                cd $HOME/wrappers/node && npm install && npm run compile && \
+#                                cd $HOME/agents/node/vcxagent-core && npm install && \
+#                                cd $HOME/agents/node/vcxagent-cli && npm install && \
+#                                cd $HOME/agents/node/vcxagent-core && npm run test:integration)'
+#
+#  # TODO: Add tests of iOS build
+#  publish-ios-wrapper:
+#    needs: [workflow-setup, build-image-libvcx]
+#    runs-on: macos-10.15
+#    env:
+#      LIBVCX_VERSION: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
+#      PUBLISH_VERSION: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
+#    steps:
+#    - name: Git checkout
+#      uses: actions/checkout@v2
+#    - name: Switch to xcode version 11
+#      run: |
+#        sudo xcode-select --switch /Applications/Xcode_11.7.app/Contents/Developer
+#        xcodebuild -version
+#    - name: Build iOS wrapper
+#      run: |
+#          ./wrappers/ios/ci/build.sh
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: libvcx-ios-${{ env.PUBLISH_VERSION }}-device
+#        path: /tmp/artifacts/libvcx-ios-${{ env.PUBLISH_VERSION }}-device.zip
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: libvcx-ios-${{ env.PUBLISH_VERSION }}-universal
+#        path: /tmp/artifacts/libvcx-ios-${{ env.PUBLISH_VERSION }}-universal.zip
+#
+#  # test-android-wrapper:
+#  #   runs-on: ubuntu-16.04
+#  #   needs: [workflow-setup, build-image-android]
+#  #   env:
+#  #     DOCKER_BUILDKIT: 1
+#  #     CACHE_KEY_ANDROID: ${{needs.workflow-setup.outputs.CACHE_KEY_ANDROID}}
+#  #     DOCKER_IMG_NAME_ANDROID: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID}}
+#  #   steps:
+#  #     - name: Git checkout
+#  #       uses: actions/checkout@v2
+#
+#  #     - name: Load android image cache
+#  #       id: load-cached-android-image
+#  #       uses: actions/cache@v2
+#  #       with:
+#  #         path: /tmp/imgcache
+#  #         key: ${{ env.CACHE_KEY_ANDROID }}
+#  #     - name: If no cached image found
+#  #       if: steps.load-cached-android-image.outputs.cache-hit != 'true'
+#  #       run: echo "ERROR == Expected to find image from cache $CACHE_KEY_ANDROID"; exit -1
+#  #     - name: Load android image from cache
+#  #       run: docker load < /tmp/imgcache/img_android.rar
+#
+#  #     - name: Test android wrapper
+#  #       run: |
+#  #         # docker run --name test-android-wrapper -v $PWD:/home/indy/aries-vcx:rw $DOCKER_IMG_NAME_ANDROID \
+#  #         docker run --name test-android-wrapper $DOCKER_IMG_NAME_ANDROID \
+#  #                             bash -c '(cd $HOME/aries-vcx/libvcx && ./android.wrapper.test.sh x86)'
+#
+#  publish-android-wrapper-device:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-android]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      FULL_VERSION_NAME: libvcx-android-${{needs.workflow-setup.outputs.PUBLISH_VERSION}}-device
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Load android image cache
+#        id: load-cached-android-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ needs.workflow-setup.outputs.CACHE_KEY_ANDROID }}
+#
+#      - name: If no cached image found
+#        if: steps.load-cached-android-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache"; exit -1
+#
+#      - name: Load android image from cache
+#        run: |
+#          docker load < /tmp/imgcache/img_android.rar
+#          rm -rf /tmp/imgcache
+#
+#      - name: Build, run android wrapper tests, and publish artifacts
+#        uses: ./.github/actions/publish-android
+#        with:
+#          abis: "arm arm64"
+#          docker-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID }}
+#          full-version-name: ${{ env.FULL_VERSION_NAME }}
+#
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: ${{ env.FULL_VERSION_NAME }}
+#          path: /tmp/artifacts/aar/${{ env.FULL_VERSION_NAME }}.aar
+#
+#  publish-android-wrapper-emulator:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-android]
+#    env:
+#      DOCKER_BUILDKIT: 1
+#      FULL_VERSION_NAME: libvcx-android-${{needs.workflow-setup.outputs.PUBLISH_VERSION}}-emulator
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Load android image cache
+#        id: load-cached-android-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ needs.workflow-setup.outputs.CACHE_KEY_ANDROID }}
+#
+#      - name: If no cached image found
+#        if: steps.load-cached-android-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache"; exit -1
+#
+#      - name: Load image from cache
+#        run: |
+#          docker load < /tmp/imgcache/img_android.rar
+#          rm -rf /tmp/imgcache
+#
+#      - name: Build, run android wrapper tests, and publish artifacts
+#        uses: ./.github/actions/publish-android
+#        with:
+#          abis: "x86 x86_64"
+#          docker-img-name: ${{ needs.workflow-setup.outputs.DOCKER_IMG_NAME_ANDROID }}
+#          full-version-name: ${{ env.FULL_VERSION_NAME }}
+#
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: ${{ env.FULL_VERSION_NAME }}
+#          path: /tmp/artifacts/aar/${{ env.FULL_VERSION_NAME }}.aar
+#
+#  publish-libvcx:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx]
+#    env:
+#      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
+#      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
+#      PUBLISH_VERSION: ${{needs.workflow-setup.outputs.PUBLISH_VERSION}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Verify libvcx image were loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
+#
+#      - name: Docker Login
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Publish image
+#        run: |
+#          if [[ "$PUBLISH_VERSION" ]]
+#          then
+#            IFS=$':' read -a arr <<< $DOCKER_IMG_NAME_LIBVCX
+#            DOCKER_IMG_NAME_TAGLESS=${arr[0]}
+#            GITHUB_REPOSITORY_LOWERCASE=`echo $GITHUB_REPOSITORY | awk '{print tolower($0)}'`
+#            REMOTE_DOCKER_IMG_NAME_LIBVCX="docker.pkg.github.com/${GITHUB_REPOSITORY_LOWERCASE}/${DOCKER_IMG_NAME_TAGLESS}:${PUBLISH_VERSION}"
+#            echo "Releasing libvcx docker image version $PUBLISH_VERSION, tagged $REMOTE_DOCKER_IMG_NAME_LIBVCX"
+#            docker tag "$DOCKER_IMG_NAME_LIBVCX" "$REMOTE_DOCKER_IMG_NAME_LIBVCX"
+#            docker push "$REMOTE_DOCKER_IMG_NAME_LIBVCX" || true
+#          else
+#             echo "New version was not defined, skipping release."
+#          fi
+#
+#  publish-node-wrapper:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-node-wrapper, test-integration-node-wrapper]
+#    env:
+#      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+#      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
+#      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
+#      PUBLISH_VERSION: ${{needs.workflow-setup.outputs.PUBLISH_VERSION}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Verify libvcx image were loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
+#
+#      - name: Docker Login
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Release wrapper
+#        run: |
+#          if [[ "$PUBLISH_VERSION" ]]
+#          then
+#            echo "Releasing node wrapper version $PUBLISH_VERSION..."
+#            docker run --rm -i --name libvcx --network host \
+#                   -e NPMJS_TOKEN="$NPMJS_TOKEN" \
+#                   -e PUBLISH_VERSION="$PUBLISH_VERSION" \
+#                    "$DOCKER_IMG_NAME_LIBVCX" bash -c '$HOME/wrappers/node/publish.sh'
+#          else
+#             echo "New version was not defined, skipping release."
+#          fi
+#
+#  publish-agent-core:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-node-wrapper, test-integration-node-wrapper]
+#    env:
+#      NPMJS_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+#      CACHE_KEY_LIBVCX: ${{needs.workflow-setup.outputs.CACHE_KEY_LIBVCX}}
+#      DOCKER_IMG_NAME_LIBVCX: ${{needs.workflow-setup.outputs.DOCKER_IMG_NAME_LIBVCX}}
+#      PUBLISH_VERSION: ${{needs.workflow-setup.outputs.PUBLISH_VERSION}}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Load libvcx image cache
+#        id: load-cached-libvcx-image
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/imgcache
+#          key: ${{ env.CACHE_KEY_LIBVCX }}
+#      - name: If no cached image found
+#        if: steps.load-cached-libvcx-image.outputs.cache-hit != 'true'
+#        run: echo "ERROR == Expected to find image from cache $CACHE_KEY_LIBVCX"; exit -1
+#      - name: Load image from cache
+#        run: docker load < /tmp/imgcache/img_libvcx.rar
+#
+#      - name: Verify libvcx image were loaded
+#        run: |
+#          docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKER_IMG_NAME_LIBVCX" || { echo "Image $DOCKER_IMG_NAME_LIBVCX was not found!" ; exit 1; }
+#      - name: Docker Login
+#        uses: azure/docker-login@v1
+#        with:
+#          login-server: docker.pkg.github.com
+#          username: $GITHUB_ACTOR
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Release agent-core package
+#        run: |
+#          if [[ "$PUBLISH_VERSION" ]]
+#          then
+#            echo "Releasing node wrapper version $PUBLISH_VERSION..."
+#            docker run --rm -i --name libvcx --network host \
+#                   -e NPMJS_TOKEN="$NPMJS_TOKEN" \
+#                   -e PUBLISH_VERSION="$PUBLISH_VERSION" \
+#                    "$DOCKER_IMG_NAME_LIBVCX" bash -c '$HOME/agents/node/vcxagent-core/publish.sh'
+#          else
+#             echo "New version was not defined, skipping release."
+#          fi
+#
+#  make-release:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, test-libvcx-image-general_test, test-libvcx-image-pool_tests, test-libvcx-image-agency_pool_tests, test-android-build, test-node-wrapper, test-integration-node-wrapper]
+#    if: ${{ needs.workflow-setup.outputs.RELEASE == 'true' || needs.workflow-setup.outputs.PRERELEASE == 'true' }}
+#    outputs:
+#      RELEASE_UPLOAD_URL: ${{ steps.create-release.outputs.upload_url }}
+#    steps:
+#      - name: Git checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Generate changelog
+#        uses: heinrichreimer/github-changelog-generator-action@v2.2
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          futureRelease: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
+#          releaseBranch: master
+#          pullRequests: true
+#          unreleased: true
+#          unreleasedOnly: true
+#          issuesWoLabels: true
+#          prWoLabels: true
+#          stripGeneratorNotice: true
+#          stripHeaders: false
+#          maxIssues: 50
+#          excludeLabels: duplicate,question,invalid,wontfix,changelog-excluded
+#          breakingLabels: backwards-incompatible,breaking
+#          deprecatedLabels: deprecated
+#          headerLabel: "# Changelog"
+#          breakingLabel: '### Breaking changes'
+#          enhancementLabel: '### Enhancements'
+#          bugsLabel: '### Bug fixes'
+#          deprecatedLabel: '###  Deprecations'
+#          removedLabel: '### Removals'
+#          securityLabel: '### Security fixes'
+#          issuesLabel: '### Other issues'
+#          prLabel: '### Other pull requests'
+#          addSections: '{"ci":{"prefix":"### CI changes","labels":["ci"]},"wrappers":{"prefix":"### Wrapper changes","labels":["wrappers"]}}'
+#          excludeTagsRegex: '^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))+)?)$'
+#
+#      - name: Create a new release
+#        id: create-release
+#        uses: actions/create-release@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          tag_name: ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
+#          release_name: Release ${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}
+#          body_path: ./CHANGELOG.md
+#          draft: ${{ needs.workflow-setup.outputs.PRERELEASE == 'true' }}
+#          prerelease: ${{ needs.workflow-setup.outputs.PRERELEASE == 'true' }}
+#
+#  release-android-device:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
+#    steps:
+#      - name: Fetch android device build from artifacts
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device
+#      - name: Upload release assets
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
+#          asset_path: ./libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.aar
+#          asset_name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.aar
+#          asset_content_type: application/aar
+#
+#
+#  release-android-emulator:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
+#    steps:
+#      - name: Fetch android emulator build from artifacts
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-emulator
+#      - name: Upload release assets
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
+#          asset_path: ./libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-emulator.aar
+#          asset_name: libvcx-android-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-emulator.aar
+#          asset_content_type: application/aar
+#
+#  release-ios-device:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
+#    steps:
+#      - name: Fetch iOS device build from artifacts
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device
+#      - name: Upload release assets
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
+#          asset_path: ./libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.zip
+#          asset_name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-device.zip
+#          asset_content_type: application/zip
+#
+#  release-ios-universal:
+#    runs-on: ubuntu-16.04
+#    needs: [workflow-setup, build-image-indypool, build-image-libvcx, build-image-android, publish-ios-wrapper, publish-android-wrapper-device, publish-android-wrapper-emulator, make-release]
+#    steps:
+#      - name: Fetch iOS universal build from artifacts
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-universal
+#      - name: Upload release assets
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ needs.make-release.outputs.RELEASE_UPLOAD_URL }}
+#          asset_path: ./libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-universal.zip
+#          asset_name: libvcx-ios-${{ needs.workflow-setup.outputs.PUBLISH_VERSION }}-universal.zip
+#          asset_content_type: application/zip

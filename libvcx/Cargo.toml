@@ -1,12 +1,11 @@
 [package]
-
 name = "libvcx"
 version = "0.19.0"
 authors = ["Absa Group Limited", "Hyperledger Indy Contributors <hyperledger-indy@lists.hyperledger.org>"]
-publish = false
 description = "Absa's fork of HL LibVCX"
 license = "Apache-2.0"
 edition = "2018"
+repository = "https://github.com/hyperledger/aries-vcx"
 
 [lib]
 name = "vcx"
