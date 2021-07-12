@@ -1,11 +1,9 @@
-extern crate openssl;
 extern crate rust_base58;
 
 use crate::error::prelude::*;
 use crate::settings::Actors;
 use crate::utils::qualifier;
 
-use self::openssl::bn::BigNum;
 use self::rust_base58::FromBase58;
 
 pub fn validate_did(did: &str) -> VcxResult<String> {
@@ -29,37 +27,12 @@ pub fn validate_did(did: &str) -> VcxResult<String> {
 }
 
 pub fn validate_verkey(verkey: &str) -> VcxResult<String> {
-    //    assert len(base58.b58decode(ver_key)) == 32
     let check_verkey = String::from(verkey);
     match check_verkey.from_base58() {
         Ok(ref x) if x.len() == 32 => Ok(check_verkey),
         Ok(_) => Err(VcxError::from_msg(VcxErrorKind::InvalidVerkey, "Invalid Verkey length")),
         Err(x) => Err(VcxError::from_msg(VcxErrorKind::NotBase58, format!("Invalid Verkey: {}", x))),
     }
-}
-
-pub fn validate_nonce(nonce: &str) -> VcxResult<String> {
-    let nonce = BigNum::from_dec_str(nonce)
-        .map_err(|err| VcxError::from_msg(VcxErrorKind::InvalidNonce, err))?;
-    if nonce.num_bits() > 80 {
-        return Err(VcxError::from_msg(VcxErrorKind::InvalidNonce, "Invalid Nonce length"));
-    }
-    Ok(nonce.to_string())
-}
-
-pub fn validate_key_delegate(delegate: &str) -> VcxResult<String> {
-    //todo: find out what needs to be validated for key_delegate
-    let check_delegate = String::from(delegate);
-    Ok(check_delegate)
-}
-
-pub fn validate_actors(actors: &str) -> VcxResult<Vec<Actors>> {
-    ::serde_json::from_str(&actors)
-        .map_err(|err| VcxError::from_msg(VcxErrorKind::InvalidOption, format!("Invalid actors: {:?}", err)))
-}
-
-pub fn validate_phone_number(p_num: &str) -> VcxResult<String> {
-    Ok(String::from(p_num))
 }
 
 pub fn validate_payment_method(payment_method: &str) -> VcxResult<()> {

@@ -14,7 +14,6 @@ extern crate lazy_static;
 extern crate libc;
 #[macro_use]
 extern crate log;
-extern crate openssl;
 extern crate rand;
 extern crate regex;
 extern crate rmp_serde;
