@@ -2,7 +2,7 @@ import * as ffi from 'ffi-napi';
 import { VCXInternalError } from '../errors';
 import { rustAPI } from '../rustlib';
 import { createFFICallbackPromise } from '../utils/ffi-helpers';
-import { ISerializedData } from './common';
+import { ISerializedData, IssuerStateType } from './common';
 import { Connection } from './connection';
 import { VCXBaseWithState } from './vcx-base-with-state';
 import { PaymentManager } from './vcx-payment-txn';
@@ -66,6 +66,7 @@ export interface IIssuerCredentialCreateData {
   credentialName: string;
   // price of credential
   price: string;
+  issuerDid: string;
 }
 
 export interface IIssuerCredentialVCXAttributes {
@@ -96,7 +97,7 @@ export class IssuerCredentialPaymentManager extends PaymentManager {
 /**
  * A Credential created by the issuing party (institution)
  */
-export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData> {
+export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData, IssuerStateType> {
   /**
    * Create a Issuer Credential object that provides a credential for an enterprise's user
    * Assumes a credential definition has been already written to the ledger.
@@ -112,6 +113,7 @@ export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData> {
     credDefHandle,
     credentialName,
     price,
+    issuerDid,
   }: IIssuerCredentialCreateData): Promise<IssuerCredential> {
     try {
       const attrsVCX: IIssuerCredentialVCXAttributes = attr;
@@ -123,7 +125,6 @@ export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData> {
       });
       const attrsStringified = attrsVCX ? JSON.stringify(attrsVCX) : attrsVCX;
       const commandHandle = 0;
-      const issuerDid = null;
       await credential._create((cb) =>
         rustAPI().vcx_issuer_create_credential(
           commandHandle,
@@ -288,15 +289,6 @@ export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData> {
    * Sends the credential to the end user.
    *
    * Credential is made up of the data sent during Credential Offer
-   * ```
-   * connection = await connectionCreateConnect()
-   * issuerCredential = await issuerCredentialCreate()
-   * await issuerCredential.sendOffer(connection)
-   * await issuerCredential.updateState()
-   * assert.equal(await issuerCredential.getState(), StateType.RequestReceived)
-   * await issuerCredential.sendCredential(connection)
-   * ```
-   *
    */
   public async sendCredential(connection: Connection): Promise<void> {
     try {
@@ -325,15 +317,6 @@ export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData> {
    * Gets the credential message for sending to connection.
    *
    * Credential is made up of the data sent during Credential Offer
-   * ```
-   * connection = await connectionCreateConnect()
-   * issuerCredential = await issuerCredentialCreate()
-   * await issuerCredential.sendOffer(connection)
-   * await issuerCredential.updateState()
-   * assert.equal(await issuerCredential.getState(), StateType.RequestReceived)
-   * await issuerCredential.getCredentialMsg()
-   * ```
-   *
    */
   public async getCredentialMsg(myPwDid: string): Promise<string> {
     try {
@@ -370,16 +353,6 @@ export class IssuerCredential extends VCXBaseWithState<IIssuerCredentialData> {
    * Revokes credential.
    *
    * Credential is made up of the data sent during Credential Offer
-   * ```
-   * connection = await connectionCreateConnect()
-   * issuerCredential = await issuerCredentialCreate()
-   * await issuerCredential.sendOffer(connection)
-   * await issuerCredential.updateState()
-   * assert.equal(await issuerCredential.getState(), StateType.RequestReceived)
-   * await issuerCredential.sendCredential(connection)
-   * await issuerCredential.revokeCredential()
-   * ```
-   *
    */
   public async revokeCredential(): Promise<void> {
     try {

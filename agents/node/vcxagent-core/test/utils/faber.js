@@ -1,7 +1,7 @@
 /* eslint-env jest */
 const { buildRevocationDetails } = require('../../src')
 const { createVcxAgent, getSampleSchemaData } = require('../../src')
-const { StateType } = require('@hyperledger/node-vcx-wrapper')
+const { ConnectionStateType, IssuerStateType, VerifierStateType } = require('@hyperledger/node-vcx-wrapper')
 const { getAliceSchemaAttrs, getFaberCredDefName, getFaberProofData } = require('./data')
 
 module.exports.createFaber = async function createFaber () {
@@ -30,7 +30,7 @@ module.exports.createFaber = async function createFaber () {
     const invite = await vcxAgent.serviceConnections.inviterConnectionCreate(connectionId, undefined)
     logger.info(`Faber generated invite:\n${invite}`)
     const connection = await vcxAgent.serviceConnections.getVcxConnection(connectionId)
-    expect(await connection.getState()).toBe(StateType.Initialized)
+    expect(await connection.getState()).toBe(ConnectionStateType.Invited)
 
     await vcxAgent.agentShutdownVcx()
 
@@ -41,7 +41,7 @@ module.exports.createFaber = async function createFaber () {
     logger.info('Faber is going to generate invite')
     await vcxAgent.agentInitVcx()
 
-    expect(await vcxAgent.serviceConnections.connectionUpdate(connectionId)).toBe(StateType.RequestReceived)
+    expect(await vcxAgent.serviceConnections.connectionUpdate(connectionId)).toBe(ConnectionStateType.Responded)
 
     await vcxAgent.agentShutdownVcx()
   }
@@ -90,7 +90,7 @@ module.exports.createFaber = async function createFaber () {
     await vcxAgent.agentInitVcx()
 
     logger.info('Issuer sending credential')
-    expect(await vcxAgent.serviceCredIssuer.sendCredential(issuerCredId, connectionId)).toBe(StateType.Accepted)
+    expect(await vcxAgent.serviceCredIssuer.sendCredential(issuerCredId, connectionId)).toBe(IssuerStateType.Finished)
     logger.info('Credential sent')
 
     await vcxAgent.agentShutdownVcx()
@@ -105,7 +105,7 @@ module.exports.createFaber = async function createFaber () {
     await vcxAgent.serviceVerifier.createProof(proofId, proofData)
     logger.info(`Faber is sending proof request to connection ${connectionId}`)
     const { state, proofRequestMessage } = await vcxAgent.serviceVerifier.sendProofRequest(connectionId, proofId)
-    expect(state).toBe(StateType.OfferSent)
+    expect(state).toBe(VerifierStateType.PresentationRequestSent)
     await vcxAgent.agentShutdownVcx()
     return proofRequestMessage
   }

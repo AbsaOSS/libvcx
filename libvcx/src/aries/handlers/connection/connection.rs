@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{EnumAccess, Error, MapAccess, SeqAccess, Unexpected, Visitor};
 use serde_json::Value;
 
-use agency_client::get_message::{Message, MessageByConnection};
+use agency_client::get_message::Message;
 use agency_client::MessageStatusCode;
 
 use crate::aries::handlers::connection::cloud_agent::CloudAgentInfo;
@@ -53,7 +53,6 @@ pub enum ConnectionState {
     Inviter(InviterState),
     Invitee(InviteeState),
 }
-
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -745,6 +744,19 @@ impl<'de> Deserialize<'de> for Connection {
         deserializer.deserialize_map(ConnectionVisitor)
     }
 }
+
+impl Into<(SmConnectionState, PairwiseInfo, CloudAgentInfo, String)> for Connection {
+    fn into(self) -> (SmConnectionState, PairwiseInfo, CloudAgentInfo, String) {
+        (self.state_object(), self.pairwise_info().to_owned(), self.cloud_agent_info().to_owned(), self.source_id())
+    }
+}
+
+impl From<(SmConnectionState, PairwiseInfo, CloudAgentInfo, String)> for Connection {
+    fn from((state, pairwise_info, cloud_agent_info, source_id): (SmConnectionState, PairwiseInfo, CloudAgentInfo, String)) -> Connection {
+        Connection::from_parts(source_id, pairwise_info, cloud_agent_info, state, true)
+    }
+}
+
 
 #[cfg(test)]
 pub mod tests {

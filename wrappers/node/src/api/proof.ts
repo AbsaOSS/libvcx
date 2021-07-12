@@ -2,7 +2,7 @@ import * as ffi from 'ffi-napi';
 import { VCXInternalError } from '../errors';
 import { rustAPI } from '../rustlib';
 import { createFFICallbackPromise } from '../utils/ffi-helpers';
-import { ISerializedData, StateType } from './common';
+import { ISerializedData, VerifierStateType } from './common';
 import { Connection } from './connection';
 import { VCXBaseWithState } from './vcx-base-with-state';
 
@@ -78,7 +78,7 @@ export interface IProofData {
   requested_attrs: string;
   requested_predicates: string;
   prover_did: string;
-  state: StateType;
+  state: number;
   name: string;
   proof_state: ProofState;
   proof: any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -166,46 +166,15 @@ export interface IRevocationInterval {
 /**
  * Class representing a Proof
  */
-export class Proof extends VCXBaseWithState<IProofData> {
+export class Proof extends VCXBaseWithState<IProofData, VerifierStateType> {
   /**
    * Get the state of the proof
-   *
-   * Example
-   * ```
-   * data = {
-   *   attrs: [
-   *     { name: 'attr1' },
-   *     { name: 'attr2' }],
-   *   name: 'Proof',
-   *   sourceId: 'testProofSourceId'
-   * }
-   * proof = await Proof.create(data)
-   * await proof.requestProof(connection)
-   * assert.equal(await proof.getState(), StateType.OfferSent)
-   * ```
    */
   get proofState(): ProofState | null {
     return this._proofState;
   }
   /**
    * Get the attributes of the proof
-   *
-   * Example
-   * ```
-   * data = {
-   *   attrs: [
-   *     { name: 'attr1' },
-   *     { name: 'attr2' }],
-   *   name: 'Proof',
-   *   sourceId: 'testProofSourceId'
-   * }
-   * proof = await Proof.create(data)
-   * await proof.requestProof(connection)
-   * assert.equal(await proof.getState(), StateType.OfferSent)
-   * proofData = await proof.getProof(connection)
-   * await proof.updateState()
-   * assert.equal(await proof.requestedAttributes(), data.attrs)
-   * ```
    */
   get requestedAttributes(): IProofAttr[] {
     return this._requestedAttributes;
@@ -217,23 +186,6 @@ export class Proof extends VCXBaseWithState<IProofData> {
 
   /**
    * Get the name of the proof
-   *
-   * Example
-   * ```
-   * data = {
-   *   attrs: [
-   *     { name: 'attr1' },
-   *     { name: 'attr2' }],
-   *   name: 'Proof',
-   *   sourceId: 'testProofSourceId'
-   * }
-   * proof = await Proof.create(data)
-   * await proof.requestProof(connection)
-   * assert.equal(await proof.getState(), StateType.OfferSent)
-   * proofData = await proof.getProof(connection)
-   * await proof.updateState()
-   * assert.equal(await proof.name(), data.name)
-   * ```
    */
   get name(): string {
     return this._name;

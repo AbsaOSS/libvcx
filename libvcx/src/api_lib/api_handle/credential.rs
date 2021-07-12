@@ -86,7 +86,7 @@ pub fn credential_create_with_msgid(source_id: &str, connection_handle: u32, msg
 pub fn update_state(handle: u32, message: Option<&str>, connection_handle: u32) -> VcxResult<u32> {
     HANDLE_MAP.get_mut(handle, |credential| {
         trace!("credential::update_state >>> ");
-        if credential.is_terminal_state() { return Ok(credential.get_state()); }
+        if credential.is_terminal_state() { return Ok(credential.get_state().into()); }
         let send_message = connection::send_message_closure(connection_handle)?;
 
         if let Some(message) = message {
@@ -100,7 +100,7 @@ pub fn update_state(handle: u32, message: Option<&str>, connection_handle: u32) 
                 connection::update_message_status(connection_handle, uid)?;
             }
         }
-        Ok(credential.get_state())
+        Ok(credential.get_state().into())
     })
 }
 
@@ -170,7 +170,7 @@ pub fn get_credential_offer(handle: u32) -> VcxResult<String> {
 
 pub fn get_state(handle: u32) -> VcxResult<u32> {
     HANDLE_MAP.get(handle, |credential| {
-        Ok(credential.get_state())
+        Ok(credential.get_state().into())
     }).map_err(handle_err)
 }
 
@@ -287,12 +287,12 @@ pub fn get_credential_status(handle: u32) -> VcxResult<u32> {
 pub mod tests {
     use crate::api_lib::api_handle::connection;
     use crate::api_lib::api_handle::credential::{credential_create_with_offer, get_attributes, get_credential, send_credential_request};
-    use crate::api_lib::VcxStateType;
     use crate::aries::messages::issuance::credential::Credential;
     use crate::error::VcxErrorKind;
     use crate::utils::devsetup::*;
     use crate::utils::mockdata::mockdata_credex::{ARIES_CREDENTIAL_OFFER, ARIES_CREDENTIAL_OFFER_JSON_FORMAT, ARIES_CREDENTIAL_RESPONSE, CREDENTIAL_SM_FINISHED, CREDENTIAL_SM_OFFER_RECEIVED};
     use crate::utils::mockdata::mockdata_credex;
+    use crate::aries::handlers::issuance::holder::holder::HolderState;
 
     use super::*;
 
@@ -363,7 +363,7 @@ pub mod tests {
 
         info!("full_credential_test:: going to credential_create_with_offer");
         let handle_cred = credential_create_with_offer("TEST_CREDENTIAL", &offer).unwrap();
-        assert_eq!(VcxStateType::VcxStateRequestReceived as u32, get_state(handle_cred).unwrap());
+        assert_eq!(HolderState::OfferReceived as u32, get_state(handle_cred).unwrap());
 
         info!("full_credential_test:: going get offered attributes from offer received state");
         let offer_attrs: String = get_attributes(handle_cred).unwrap();
@@ -374,14 +374,14 @@ pub mod tests {
 
         info!("full_credential_test:: going to send_credential_request");
         send_credential_request(handle_cred, handle_conn).unwrap();
-        assert_eq!(VcxStateType::VcxStateOfferSent as u32, get_state(handle_cred).unwrap());
+        assert_eq!(HolderState::RequestSent as u32, get_state(handle_cred).unwrap());
 
         AgencyMockDecrypted::set_next_decrypted_response(GET_MESSAGES_DECRYPTED_RESPONSE);
         AgencyMockDecrypted::set_next_decrypted_message(ARIES_CREDENTIAL_RESPONSE);
 
         info!("full_credential_test:: going to update_state, should receive credential");
         update_state(handle_cred, None, handle_conn).unwrap();
-        assert_eq!(get_state(handle_cred).unwrap(), VcxStateType::VcxStateAccepted as u32);
+        assert_eq!(get_state(handle_cred).unwrap(), HolderState::Finished as u32);
 
         info!("full_credential_test:: going to get_credential");
         let msg = get_credential(handle_cred).unwrap();
@@ -405,7 +405,7 @@ pub mod tests {
         let _setup = SetupMocks::init();
 
         let handle_cred = credential_create_with_offer("TEST_CREDENTIAL", ARIES_CREDENTIAL_OFFER_JSON_FORMAT).unwrap();
-        assert_eq!(VcxStateType::VcxStateRequestReceived as u32, get_state(handle_cred).unwrap());
+        assert_eq!(HolderState::OfferReceived as u32, get_state(handle_cred).unwrap());
 
         let offer_attrs: String = get_attributes(handle_cred).unwrap();
         let offer_attrs: serde_json::Value = serde_json::from_str(&offer_attrs).unwrap();
@@ -427,7 +427,7 @@ pub mod tests {
         let their_pw_did = connection::get_their_pw_did(connection_h).unwrap();
 
         let c_h = credential_create_with_offer("TEST_CREDENTIAL", &offer).unwrap();
-        assert_eq!(VcxStateType::VcxStateRequestReceived as u32, get_state(c_h).unwrap());
+        assert_eq!(HolderState::OfferReceived as u32, get_state(c_h).unwrap());
 
         let msg = generate_credential_request_msg(c_h, &my_pw_did, &their_pw_did).unwrap();
         // serde_json::from_str::<CredentialRequest>(&msg).unwrap();

@@ -15,6 +15,16 @@ pub struct Prover {
     prover_sm: ProverSM,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ProverState {
+    Initial,
+    PresentationPrepared,
+    PresentationPreparationFailed,
+    PresentationSent,
+    Finished,
+    Failed
+}
+
 impl Prover {
     pub fn create(source_id: &str, presentation_request: PresentationRequest) -> VcxResult<Prover> {
         trace!("Prover::create >>> source_id: {}, presentation_request: {:?}", source_id, presentation_request);
@@ -23,7 +33,7 @@ impl Prover {
         })
     }
 
-    pub fn state(&self) -> u32 { self.prover_sm.state() }
+    pub fn get_state(&self) -> ProverState { self.prover_sm.get_state() }
 
     pub fn presentation_status(&self) -> u32 {
         trace!("Prover::presentation_state >>>");
@@ -113,9 +123,9 @@ impl Prover {
         }
     }
 
-    pub fn update_state(&mut self, connection: &Connection) -> VcxResult<u32> {
+    pub fn update_state(&mut self, connection: &Connection) -> VcxResult<ProverState> {
         trace!("Prover::update_state >>> ");
-        if !self.has_transitions() { return Ok(self.state()); }
+        if !self.has_transitions() { return Ok(self.get_state()); }
         let send_message = connection.send_message_closure()?;
 
         let messages = connection.get_messages()?;
@@ -123,7 +133,7 @@ impl Prover {
             self.step(msg.into(), Some(&send_message))?;
             connection.update_message_status(uid)?;
         }
-        Ok(self.state())
+        Ok(self.get_state())
     }
 }
 

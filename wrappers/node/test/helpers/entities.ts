@@ -214,6 +214,7 @@ export const dataIssuerCredentialCreate = async (): Promise<IIssuerCredentialCre
     },
     credDefHandle: Number(credDef.handle),
     credentialName: 'Credential Name',
+    issuerDid: 'V4SGRU86Z58d6TV7PBUe6f',
     price: '1',
     sourceId: 'testCredentialSourceId',
   };

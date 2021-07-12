@@ -3,7 +3,7 @@ import { Callback } from 'ffi-napi';
 import { VCXInternalError } from '../errors';
 import { rustAPI } from '../rustlib';
 import { createFFICallbackPromise } from '../utils/ffi-helpers';
-import { ISerializedData } from './common';
+import { ISerializedData, ProverStateType } from './common';
 import { Connection } from './connection';
 import { VCXBaseWithState } from './vcx-base-with-state';
 
@@ -126,7 +126,7 @@ export interface IDeclinePresentationRequestData {
   proposal?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-export class DisclosedProof extends VCXBaseWithState<IDisclosedProofData> {
+export class DisclosedProof extends VCXBaseWithState<IDisclosedProofData, ProverStateType> {
   /**
    * Create a proof for fulfilling a corresponding proof request
    *

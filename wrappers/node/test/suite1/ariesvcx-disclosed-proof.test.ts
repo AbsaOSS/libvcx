@@ -11,7 +11,7 @@ import {
 } from 'helpers/entities'
 import { initVcxTestMode, shouldThrow } from 'helpers/utils';
 import { mapValues } from 'lodash';
-import { DisclosedProof, StateType, VCXCode } from 'src';
+import { DisclosedProof, ProverStateType, VCXCode } from 'src';
 
 describe('DisclosedProof', () => {
   before(() => initVcxTestMode());
@@ -120,20 +120,23 @@ describe('DisclosedProof', () => {
   });
 
   describe('updateState:', () => {
-    it(`returns ${StateType.None}: not initialized`, async () => {
+    it('Throws error when not initialized', async () => {
+      let caught_error;
       const disclosedProof = new (DisclosedProof as any)();
       const connection = await createConnectionInviterRequested();
-      const state1 = await disclosedProof.updateStateV2(connection);
-      const state2 = await disclosedProof.getState();
-      assert.equal(state1, state2);
-      assert.equal(state2, StateType.None);
+      try {
+        await disclosedProof.updateStateV2(connection);
+      } catch (err) {
+        caught_error = err;
+      }
+      assert.isNotNull(caught_error);
     });
 
-    it(`returns ${StateType.RequestReceived}: created`, async () => {
+    it(`returns ${ProverStateType.Initial}: created`, async () => {
       const disclosedProof = await disclosedProofCreateWithRequest();
       const connection = await createConnectionInviterRequested();
       await disclosedProof.updateStateV2(connection);
-      assert.equal(await disclosedProof.getState(), StateType.RequestReceived);
+      assert.equal(await disclosedProof.getState(), ProverStateType.Initial);
     });
   });
 
@@ -142,7 +145,7 @@ describe('DisclosedProof', () => {
       const data = await dataDisclosedProofCreateWithRequest();
       const disclosedProof = await disclosedProofCreateWithRequest(data);
       await disclosedProof.sendProof(data.connection);
-      assert.equal(await disclosedProof.getState(), StateType.Accepted);
+      assert.equal(await disclosedProof.getState(), ProverStateType.PresentationSent);
     });
   });
 
@@ -159,7 +162,7 @@ describe('DisclosedProof', () => {
         sourceId: 'disclosedProofTestSourceId',
       });
       await disclosedProof.updateStateV2(connection);
-      assert.equal(await disclosedProof.getState(), StateType.RequestReceived);
+      assert.equal(await disclosedProof.getState(), ProverStateType.Finished);
     });
   });
 

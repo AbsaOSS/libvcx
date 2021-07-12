@@ -7,9 +7,7 @@ use agency_client::get_message::MessageByConnection;
 use agency_client::MessageStatusCode;
 
 use crate::api_lib::api_handle::object_cache::ObjectCache;
-use crate::aries::handlers::connection::cloud_agent::CloudAgentInfo;
-use crate::aries::handlers::connection::connection::{Connection, SmConnectionState};
-use crate::aries::handlers::connection::pairwise_info::PairwiseInfo;
+use crate::aries::handlers::connection::connection::Connection;
 use crate::aries::messages::a2a::A2AMessage;
 use crate::aries::messages::connection::invite::Invitation as InvitationV3;
 use crate::error::prelude::*;
@@ -99,7 +97,10 @@ pub fn send_generic_message(connection_handle: u32, msg: &str) -> VcxResult<Stri
     })
 }
 
-pub fn update_state_with_message(handle: u32, message: A2AMessage) -> VcxResult<u32> {
+pub fn update_state_with_message(handle: u32, message: &str) -> VcxResult<u32> {
+    let message: A2AMessage = serde_json::from_str(&message)
+        .map_err(|err| VcxError::from_msg(VcxErrorKind::InvalidJson, format!("Failed to deserialize message {} into A2AMessage, err: {:?}", message, err)))?;
+
     CONNECTION_MAP.get_mut(handle, |connection| {
         connection.update_state_with_message(&message)?;
         Ok(error::SUCCESS.code_num)
@@ -157,18 +158,6 @@ pub fn from_string(connection_data: &str) -> VcxResult<u32> {
     let connection = Connection::from_string(connection_data)?;
     let handle = CONNECTION_MAP.add(connection)?;
     Ok(handle)
-}
-
-impl Into<(SmConnectionState, PairwiseInfo, CloudAgentInfo, String)> for Connection {
-    fn into(self) -> (SmConnectionState, PairwiseInfo, CloudAgentInfo, String) {
-        (self.state_object(), self.pairwise_info().to_owned(), self.cloud_agent_info().to_owned(), self.source_id())
-    }
-}
-
-impl From<(SmConnectionState, PairwiseInfo, CloudAgentInfo, String)> for Connection {
-    fn from((state, pairwise_info, cloud_agent_info, source_id): (SmConnectionState, PairwiseInfo, CloudAgentInfo, String)) -> Connection {
-        Connection::from_parts(source_id, pairwise_info, cloud_agent_info, state, true)
-    }
 }
 
 pub fn release(handle: u32) -> VcxResult<()> {
@@ -357,8 +346,7 @@ pub mod tests {
 
     pub fn build_test_connection_inviter_requested() -> u32 {
         let handle = build_test_connection_inviter_invited();
-        let msg: A2AMessage = serde_json::from_str(ARIES_CONNECTION_REQUEST).unwrap();
-        update_state_with_message(handle, msg).unwrap();
+        update_state_with_message(handle, ARIES_CONNECTION_REQUEST).unwrap();
         handle
     }
 
@@ -513,8 +501,7 @@ pub mod tests {
         let _setup = SetupMocks::init();
 
         let handle = create_connection("test_process_acceptance_message").unwrap();
-        let message = serde_json::from_str(ARIES_CONNECTION_REQUEST).unwrap();
-        assert_eq!(error::SUCCESS.code_num, update_state_with_message(handle, message).unwrap());
+        assert_eq!(error::SUCCESS.code_num, update_state_with_message(handle, ARIES_CONNECTION_REQUEST).unwrap());
     }
 
     #[test]

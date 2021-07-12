@@ -105,18 +105,46 @@ export enum VCXCode {
   INVALID_REDIRECT_DETAILS = 1104,
   NO_AGENT_INFO = 1106,
 }
-export enum StateType {
-  None = 0,
-  Initialized = 1,
-  OfferSent = 2,
-  RequestReceived = 3,
-  Accepted = 4,
-  Unfulfilled = 5,
-  Expired = 6,
-  Revoked = 7,
-  Redirected = 8,
-  Rejected = 9,
+export enum ConnectionStateType {
+  Null = 0,
+  Invited = 1,
+  Requested = 2,
+  Responded = 3,
+  Finished = 4,
 }
+
+export enum HolderStateType {
+  OfferReceived = 0,
+  RequestSent = 1,
+  Finished = 2,
+  Failed = 3,
+}
+
+export enum IssuerStateType {
+  Initial = 0,
+  OfferSent = 1,
+  RequestReceived = 2,
+  CredentialSent = 3,
+  Finished = 4,
+  Failed = 5,
+}
+
+export enum ProverStateType {
+  Initial = 0,
+  PresentationPrepared = 1,
+  PresentationPreparationFailed = 2,
+  PresentationSent = 3,
+  Finished = 4,
+  Failed = 5,
+}
+
+export enum VerifierStateType {
+  Initial = 0,
+  PresentationRequestSent = 1,
+  Finished = 2,
+  Failed = 3,
+}
+
 
 export interface IInitVCXOptions {
   libVCXPath?: string;

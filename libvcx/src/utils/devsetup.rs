@@ -15,7 +15,6 @@ use crate::utils::devsetup_agent::test::{Alice, Faber, TestAgent};
 use crate::utils::file::write_file;
 use crate::utils::get_temp_dir_path;
 use crate::utils::logger::LibvcxDefaultLogger;
-use crate::api_lib::api_handle::object_cache::ObjectCache;
 use crate::utils::plugins::init_plugin;
 
 pub struct SetupEmpty; // clears settings, setups up logging
@@ -427,23 +426,5 @@ impl TempFile {
 impl Drop for TempFile {
     fn drop(&mut self) {
         fs::remove_file(&self.path).unwrap()
-    }
-}
-
-#[cfg(feature = "agency_pool_tests")]
-mod tests {
-    use crate::api_lib::api_handle::connection;
-
-    use super::*;
-
-    #[cfg(feature = "agency_pool_tests")]
-    #[test]
-    pub fn test_two_enterprise_connections() {
-        let _setup = SetupLibraryAgencyV2ZeroFees::init();
-        let mut institution = Faber::setup();
-        let mut consumer1 = Alice::setup();
-
-        let (_faber, _alice) = connection::tests::create_and_store_connected_connections(&mut consumer1, &mut institution);
-        let (_faber, _alice) = connection::tests::create_and_store_connected_connections(&mut consumer1, &mut institution);
     }
 }

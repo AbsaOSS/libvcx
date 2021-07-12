@@ -240,14 +240,14 @@ pub mod test {
             let connection_by_handle = connection::store_connection(self.connection.clone()).unwrap();
             issuer_credential::send_credential_offer(self.credential_handle, connection_by_handle, None).unwrap();
             issuer_credential::update_state(self.credential_handle, None, connection_by_handle).unwrap();
-            assert_eq!(2, issuer_credential::get_state(self.credential_handle).unwrap());
+            assert_eq!(1, issuer_credential::get_state(self.credential_handle).unwrap());
         }
 
         pub fn send_credential(&mut self) {
             self.activate().unwrap();
             let connection_by_handle = connection::store_connection(self.connection.clone()).unwrap();
             issuer_credential::update_state(self.credential_handle, None, connection_by_handle).unwrap();
-            assert_eq!(3, issuer_credential::get_state(self.credential_handle).unwrap());
+            assert_eq!(2, issuer_credential::get_state(self.credential_handle).unwrap());
 
             issuer_credential::send_credential(self.credential_handle, connection_by_handle).unwrap();
             issuer_credential::update_state(self.credential_handle, None, connection_by_handle).unwrap();
@@ -258,18 +258,18 @@ pub mod test {
         pub fn request_presentation(&mut self) {
             self.activate().unwrap();
             self.presentation_handle = self.create_presentation_request();
-            assert_eq!(1, proof::get_state(self.presentation_handle).unwrap());
+            assert_eq!(0, proof::get_state(self.presentation_handle).unwrap());
 
             let connection_by_handle = connection::store_connection(self.connection.clone()).unwrap();
             proof::send_proof_request(self.presentation_handle, connection_by_handle, None).unwrap();
             proof::update_state(self.presentation_handle, None, connection_by_handle).unwrap();
 
-            assert_eq!(2, proof::get_state(self.presentation_handle).unwrap());
+            assert_eq!(1, proof::get_state(self.presentation_handle).unwrap());
         }
 
         pub fn verify_presentation(&mut self) {
             self.activate().unwrap();
-            self.update_proof_state(4, aries::messages::status::Status::Success.code())
+            self.update_proof_state(2, aries::messages::status::Status::Success.code())
         }
 
         pub fn update_proof_state(&mut self, expected_state: u32, expected_status: u32) {
@@ -363,17 +363,17 @@ pub mod test {
             let offer_json = serde_json::to_string(&offer).unwrap();
 
             self.credential_handle = credential::credential_create_with_offer("degree", &offer_json).unwrap();
-            assert_eq!(3, credential::get_state(self.credential_handle).unwrap());
+            assert_eq!(0, credential::get_state(self.credential_handle).unwrap());
 
             credential::send_credential_request(self.credential_handle, connection_by_handle).unwrap();
-            assert_eq!(2, credential::get_state(self.credential_handle).unwrap());
+            assert_eq!(1, credential::get_state(self.credential_handle).unwrap());
         }
 
         pub fn accept_credential(&mut self) {
             self.activate().unwrap();
             let connection_by_handle = connection::store_connection(self.connection.clone()).unwrap();
             credential::update_state(self.credential_handle, None, connection_by_handle).unwrap();
-            assert_eq!(4, credential::get_state(self.credential_handle).unwrap());
+            assert_eq!(2, credential::get_state(self.credential_handle).unwrap());
             assert_eq!(aries::messages::status::Status::Success.code(), credential::get_credential_status(self.credential_handle).unwrap());
         }
 
@@ -410,11 +410,11 @@ pub mod test {
             let credentials = self.get_credentials_for_presentation();
 
             disclosed_proof::generate_proof(self.presentation_handle, credentials.to_string(), String::from("{}")).unwrap();
-            assert_eq!(3, disclosed_proof::get_state(self.presentation_handle).unwrap());
+            assert_eq!(1, disclosed_proof::get_state(self.presentation_handle).unwrap());
 
             let connection_by_handle = connection::store_connection(self.connection.clone()).unwrap();
             disclosed_proof::send_proof(self.presentation_handle, connection_by_handle).unwrap();
-            assert_eq!(2, disclosed_proof::get_state(self.presentation_handle).unwrap());
+            assert_eq!(3, disclosed_proof::get_state(self.presentation_handle).unwrap());
         }
 
         pub fn decline_presentation_request(&mut self) {

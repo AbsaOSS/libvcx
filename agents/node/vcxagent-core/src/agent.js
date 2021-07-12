@@ -30,6 +30,7 @@ async function createVcxAgent ({ agentName, genesisPath, agencyUrl, seed, usePos
     await storageService.saveAgentProvision(agentProvision)
   }
   const agentProvision = await storageService.loadAgentProvision()
+  const issuerDid = agentProvision.issuerConfig["institution_did"]
 
   async function agentInitVcx () {
     logger.info(`Initializing ${agentName} vcx session.`)
@@ -93,7 +94,8 @@ async function createVcxAgent ({ agentName, genesisPath, agencyUrl, seed, usePos
     loadCredDef: storageService.loadCredentialDefinition,
     saveIssuerCredential: storageService.saveCredIssuer,
     loadIssuerCredential: storageService.loadCredIssuer,
-    listIssuerCredentialIds: storageService.listCredIssuerKeys
+    listIssuerCredentialIds: storageService.listCredIssuerKeys,
+    issuerDid
   })
   const serviceCredHolder = createServiceCredHolder({
     logger,

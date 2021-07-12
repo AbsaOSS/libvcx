@@ -1,10 +1,10 @@
 const {
-  StateType,
+  IssuerStateType,
   IssuerCredential
 } = require('@hyperledger/node-vcx-wrapper')
 const { pollFunction } = require('../common')
 
-module.exports.createServiceCredIssuer = function createServiceCredIssuer ({ logger, loadConnection, loadCredDef, saveIssuerCredential, loadIssuerCredential, listIssuerCredentialIds }) {
+module.exports.createServiceCredIssuer = function createServiceCredIssuer ({ logger, loadConnection, loadCredDef, saveIssuerCredential, loadIssuerCredential, listIssuerCredentialIds, issuerDid }) {
   async function sendOffer (issuerCredId, connectionId, credDefId, schemaAttrs) {
     const connection = await loadConnection(connectionId)
     const credDef = await loadCredDef(credDefId)
@@ -14,7 +14,8 @@ module.exports.createServiceCredIssuer = function createServiceCredIssuer ({ log
       sourceId: 'alice_degree',
       credDefHandle: credDef.handle,
       credentialName: 'cred',
-      price: '0'
+      price: '0',
+      issuerDid
     })
     logger.info(`Per issuer credential ${issuerCredId}, sending cred offer to connection ${connectionId}`)
     await issuerCred.sendOffer(connection)
@@ -36,7 +37,7 @@ module.exports.createServiceCredIssuer = function createServiceCredIssuer ({ log
     const issuerCred = await loadIssuerCredential(issuerCredId)
     const connection = await loadConnection(connectionId)
     logger.debug('Going to wait until credential request is received.')
-    await _progressIssuerCredentialToState(issuerCred, connection, StateType.RequestReceived, 10, 2000)
+    await _progressIssuerCredentialToState(issuerCred, connection, IssuerStateType.RequestReceived, 10, 2000)
     await saveIssuerCredential(issuerCredId, issuerCred)
   }
 
@@ -45,7 +46,7 @@ module.exports.createServiceCredIssuer = function createServiceCredIssuer ({ log
     const connection = await loadConnection(connectionId)
     const issuerCred = await loadIssuerCredential(issuerCredId)
     logger.info('Going to wait until counterparty accepts the credential.')
-    await _progressIssuerCredentialToState(issuerCred, connection, StateType.Accepted, 10, 2000)
+    await _progressIssuerCredentialToState(issuerCred, connection, IssuerStateType.Finished, 10, 2000)
     await saveIssuerCredential(issuerCredId, issuerCred)
   }
 

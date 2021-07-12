@@ -1,9 +1,8 @@
 /* eslint-env jest */
 require('jest')
-const { shutdownVcx } = require('@hyperledger/node-vcx-wrapper')
 const { createPairedAliceAndFaber } = require('./utils/utils')
 const { initRustapi } = require('../src/index')
-const { StateType } = require('@hyperledger/node-vcx-wrapper')
+const { IssuerStateType, HolderStateType, ProverStateType, VerifierStateType } = require('@hyperledger/node-vcx-wrapper')
 const sleep = require('sleep-promise')
 
 beforeAll(async () => {
@@ -19,14 +18,14 @@ describe('test update state', () => {
       await faber.sendCredentialOffer()
       await alice.acceptCredentialOffer()
 
-      await faber.updateStateCredentialV2(StateType.RequestReceived)
+      await faber.updateStateCredentialV2(IssuerStateType.RequestReceived)
       await faber.sendCredential()
-      await alice.updateStateCredentialV2(StateType.Accepted)
+      await alice.updateStateCredentialV2(HolderStateType.Finished)
 
       const request = await faber.requestProofFromAlice()
       await alice.sendHolderProof(JSON.parse(request))
-      await faber.updateStateVerifierProofV2(StateType.Accepted)
-      await alice.updateStateHolderProofV2(StateType.Accepted)
+      await faber.updateStateVerifierProofV2(VerifierStateType.Finished)
+      await alice.updateStateHolderProofV2(ProverStateType.Finished)
     } catch (err) {
       console.error(`err = ${err.message} stack = ${err.stack}`)
       await sleep(2000)

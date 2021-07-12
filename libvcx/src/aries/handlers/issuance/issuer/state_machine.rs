@@ -7,6 +7,7 @@ use crate::aries::handlers::issuance::issuer::states::finished::FinishedState;
 use crate::aries::handlers::issuance::issuer::states::initial::InitialState;
 use crate::aries::handlers::issuance::issuer::states::offer_sent::OfferSentState;
 use crate::aries::handlers::issuance::issuer::states::requested_received::RequestReceivedState;
+use crate::aries::handlers::issuance::issuer::issuer::IssuerState;
 use crate::aries::handlers::issuance::issuer::utils::encode_attributes;
 use crate::aries::handlers::issuance::messages::CredentialIssuanceMessage;
 use crate::aries::messages::a2a::A2AMessage;
@@ -17,10 +18,9 @@ use crate::aries::messages::issuance::credential_request::CredentialRequest;
 use crate::aries::messages::mime_type::MimeType;
 use crate::aries::messages::status::Status;
 use crate::error::{VcxError, VcxErrorKind, VcxResult};
-use crate::api_lib::VcxStateType;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum IssuerState {
+pub enum IssuerFullState {
     Initial(InitialState),
     OfferSent(OfferSentState),
     RequestReceived(RequestReceivedState),
@@ -35,28 +35,28 @@ pub struct RevocationInfoV1 {
     pub tails_file: Option<String>,
 }
 
-impl IssuerState {
+impl IssuerFullState {
     pub fn thread_id(&self) -> String {
         match self {
-            IssuerState::Initial(_) => String::new(),
-            IssuerState::OfferSent(state) => state.thread_id.clone(),
-            IssuerState::RequestReceived(state) => state.thread_id.clone(),
-            IssuerState::CredentialSent(state) => state.thread_id.clone(),
-            IssuerState::Finished(state) => state.thread_id.clone(),
+            IssuerFullState::Initial(_) => String::new(),
+            IssuerFullState::OfferSent(state) => state.thread_id.clone(),
+            IssuerFullState::RequestReceived(state) => state.thread_id.clone(),
+            IssuerFullState::CredentialSent(state) => state.thread_id.clone(),
+            IssuerFullState::Finished(state) => state.thread_id.clone(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IssuerSM {
-    state: IssuerState,
+    state: IssuerFullState,
     source_id: String,
 }
 
 impl IssuerSM {
     pub fn new(cred_def_id: &str, credential_data: &str, rev_reg_id: Option<String>, tails_file: Option<String>, source_id: &str) -> Self {
         IssuerSM {
-            state: IssuerState::Initial(InitialState::new(cred_def_id, credential_data, rev_reg_id, tails_file)),
+            state: IssuerFullState::Initial(InitialState::new(cred_def_id, credential_data, rev_reg_id, tails_file)),
             source_id: source_id.to_string(),
         }
     }
@@ -65,7 +65,7 @@ impl IssuerSM {
         self.source_id.clone()
     }
 
-    pub fn step(state: IssuerState, source_id: String) -> Self {
+    pub fn step(state: IssuerFullState, source_id: String) -> Self {
         IssuerSM {
             state,
             source_id,
@@ -75,7 +75,7 @@ impl IssuerSM {
     pub fn revoke(&self, publish: bool) -> VcxResult<()> {
         trace!("Issuer::revoke >>> publish={}", publish);
         match &self.state {
-            IssuerState::Finished(state) => {
+            IssuerFullState::Finished(state) => {
                 match &state.revocation_info_v1 {
                     Some(rev_info) => {
                         if let (Some(cred_rev_id), Some(rev_reg_id), Some(tails_file)) = (&rev_info.cred_rev_id, &rev_info.rev_reg_id, &rev_info.tails_file) {
@@ -99,13 +99,13 @@ impl IssuerSM {
 
     pub fn get_rev_reg_id(&self) -> VcxResult<String> {
         let rev_registry = match &self.state {
-            IssuerState::Initial(state) => state.rev_reg_id.clone(),
-            IssuerState::OfferSent(state) => state.rev_reg_id.clone(),
-            IssuerState::RequestReceived(state) => state.rev_reg_id.clone(),
-            IssuerState::CredentialSent(state) => state.revocation_info_v1.clone()
+            IssuerFullState::Initial(state) => state.rev_reg_id.clone(),
+            IssuerFullState::OfferSent(state) => state.rev_reg_id.clone(),
+            IssuerFullState::RequestReceived(state) => state.rev_reg_id.clone(),
+            IssuerFullState::CredentialSent(state) => state.revocation_info_v1.clone()
                 .ok_or(VcxError::from_msg(VcxErrorKind::InvalidState, "No revocation info found - is this credential revokable?"))?
                 .rev_reg_id,
-            IssuerState::Finished(state) => state.revocation_info_v1.clone()
+            IssuerFullState::Finished(state) => state.revocation_info_v1.clone()
                 .ok_or(VcxError::from_msg(VcxErrorKind::InvalidState, "No revocation info found - is this credential revokable?"))?
                 .rev_reg_id
         };
@@ -114,11 +114,11 @@ impl IssuerSM {
 
     pub fn is_revokable(&self) -> VcxResult<bool> {
         match &self.state {
-            IssuerState::Initial(state) => Ok(state.rev_reg_id.is_some()),
-            IssuerState::OfferSent(state) => Ok(state.rev_reg_id.is_some()),
-            IssuerState::RequestReceived(state) => Ok(state.rev_reg_id.is_some()),
-            IssuerState::CredentialSent(state) => Ok(state.revocation_info_v1.is_some()),
-            IssuerState::Finished(state) => Ok(state.revocation_info_v1.is_some())
+            IssuerFullState::Initial(state) => Ok(state.rev_reg_id.is_some()),
+            IssuerFullState::OfferSent(state) => Ok(state.rev_reg_id.is_some()),
+            IssuerFullState::RequestReceived(state) => Ok(state.rev_reg_id.is_some()),
+            IssuerFullState::CredentialSent(state) => Ok(state.revocation_info_v1.is_some()),
+            IssuerFullState::Finished(state) => Ok(state.revocation_info_v1.is_some())
         }
     }
 
@@ -127,10 +127,10 @@ impl IssuerSM {
 
         for (uid, message) in messages {
             match self.state {
-                IssuerState::Initial(_) => {
+                IssuerFullState::Initial(_) => {
                     // do not process messages
                 }
-                IssuerState::OfferSent(_) => {
+                IssuerFullState::OfferSent(_) => {
                     match message {
                         A2AMessage::CredentialRequest(credential) => {
                             if credential.from_thread(&self.state.thread_id()) {
@@ -152,10 +152,10 @@ impl IssuerSM {
                         _ => {}
                     }
                 }
-                IssuerState::RequestReceived(_) => {
+                IssuerFullState::RequestReceived(_) => {
                     // do not process messages
                 }
-                IssuerState::CredentialSent(_) => {
+                IssuerFullState::CredentialSent(_) => {
                     match message {
                         A2AMessage::Ack(ack) | A2AMessage::CredentialAck(ack) => {
                             if ack.from_thread(&self.state.thread_id()) {
@@ -170,7 +170,7 @@ impl IssuerSM {
                         _ => {}
                     }
                 }
-                IssuerState::Finished(_) => {
+                IssuerFullState::Finished(_) => {
                     // do not process messages
                 }
             };
@@ -179,16 +179,16 @@ impl IssuerSM {
         None
     }
 
-    pub fn state(&self) -> u32 {
+    pub fn get_state(&self) -> IssuerState {
         match self.state {
-            IssuerState::Initial(_) => VcxStateType::VcxStateInitialized as u32,
-            IssuerState::OfferSent(_) => VcxStateType::VcxStateOfferSent as u32,
-            IssuerState::RequestReceived(_) => VcxStateType::VcxStateRequestReceived as u32,
-            IssuerState::CredentialSent(_) => VcxStateType::VcxStateAccepted as u32,
-            IssuerState::Finished(ref status) => {
+            IssuerFullState::Initial(_) => IssuerState::Initial,
+            IssuerFullState::OfferSent(_) => IssuerState::OfferSent,
+            IssuerFullState::RequestReceived(_) => IssuerState::RequestReceived,
+            IssuerFullState::CredentialSent(_) => IssuerState::CredentialSent,
+            IssuerFullState::Finished(ref status) => {
                 match status.status {
-                    Status::Success => VcxStateType::VcxStateAccepted as u32,
-                    _ => VcxStateType::VcxStateNone as u32,
+                    Status::Success => IssuerState::Finished,
+                    _ => IssuerState::Failed
                 }
             }
         }
@@ -199,7 +199,7 @@ impl IssuerSM {
 
         let IssuerSM { state, source_id } = self;
         let state = match state {
-            IssuerState::Initial(state_data) => match cim {
+            IssuerFullState::Initial(state_data) => match cim {
                 CredentialIssuanceMessage::CredentialInit(comment) => {
                     let cred_offer = libindy_issuer_create_credential_offer(&state_data.cred_def_id)?;
                     let cred_offer_msg = CredentialOffer::create()
@@ -209,16 +209,16 @@ impl IssuerSM {
                     send_message.ok_or(
                         VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                     )?(&cred_offer_msg.to_a2a_message())?;
-                    IssuerState::OfferSent((state_data, cred_offer, cred_offer_msg.id).into())
+                    IssuerFullState::OfferSent((state_data, cred_offer, cred_offer_msg.id).into())
                 }
                 _ => {
                     warn!("Credential Issuance can only start on issuer side with init");
-                    IssuerState::Initial(state_data)
+                    IssuerFullState::Initial(state_data)
                 }
             }
-            IssuerState::OfferSent(state_data) => match cim {
+            IssuerFullState::OfferSent(state_data) => match cim {
                 CredentialIssuanceMessage::CredentialRequest(request) => {
-                    IssuerState::RequestReceived((state_data, request).into())
+                    IssuerFullState::RequestReceived((state_data, request).into())
                 }
                 CredentialIssuanceMessage::CredentialProposal(_) => {
                     let problem_report = ProblemReport::create()
@@ -228,17 +228,17 @@ impl IssuerSM {
                     send_message.ok_or(
                         VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                     )?(&problem_report.to_a2a_message())?;
-                    IssuerState::Finished((state_data, problem_report).into())
+                    IssuerFullState::Finished((state_data, problem_report).into())
                 }
                 CredentialIssuanceMessage::ProblemReport(problem_report) => {
-                    IssuerState::Finished((state_data, problem_report).into())
+                    IssuerFullState::Finished((state_data, problem_report).into())
                 }
                 _ => {
                     warn!("In this state Credential Issuance can accept only Request, Proposal and Problem Report");
-                    IssuerState::OfferSent(state_data)
+                    IssuerFullState::OfferSent(state_data)
                 }
             },
-            IssuerState::RequestReceived(state_data) => match cim {
+            IssuerFullState::RequestReceived(state_data) => match cim {
                 CredentialIssuanceMessage::CredentialSend() => {
                     let credential_msg = _create_credential(&state_data.request, &state_data.rev_reg_id, &state_data.tails_file, &state_data.offer, &state_data.cred_data);
                     match credential_msg {
@@ -247,7 +247,7 @@ impl IssuerSM {
                             send_message.ok_or(
                                 VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                             )?(&credential_msg.to_a2a_message())?;
-                            IssuerState::Finished((state_data, cred_rev_id).into())
+                            IssuerFullState::Finished((state_data, cred_rev_id).into())
                         }
                         Err(err) => {
                             let problem_report = ProblemReport::create()
@@ -257,32 +257,32 @@ impl IssuerSM {
                             send_message.ok_or(
                                 VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                             )?(&problem_report.to_a2a_message())?;
-                            IssuerState::Finished((state_data, problem_report).into())
+                            IssuerFullState::Finished((state_data, problem_report).into())
                         }
                     }
                 }
                 _ => {
                     warn!("In this state Credential Issuance can accept only CredentialSend");
-                    IssuerState::RequestReceived(state_data)
+                    IssuerFullState::RequestReceived(state_data)
                 }
             }
-            IssuerState::CredentialSent(state_data) => match cim {
+            IssuerFullState::CredentialSent(state_data) => match cim {
                 CredentialIssuanceMessage::ProblemReport(_problem_report) => {
                     info!("Interaction closed with failure");
-                    IssuerState::Finished(state_data.into())
+                    IssuerFullState::Finished(state_data.into())
                 }
                 CredentialIssuanceMessage::CredentialAck(_ack) => {
                     info!("Interaction closed with success");
-                    IssuerState::Finished(state_data.into())
+                    IssuerFullState::Finished(state_data.into())
                 }
                 _ => {
                     warn!("In this state Credential Issuance can accept only Ack and Problem Report");
-                    IssuerState::CredentialSent(state_data)
+                    IssuerFullState::CredentialSent(state_data)
                 }
             }
-            IssuerState::Finished(state_data) => {
+            IssuerFullState::Finished(state_data) => {
                 warn!("Exchange is finished, no messages can be sent or received");
-                IssuerState::Finished(state_data)
+                IssuerFullState::Finished(state_data)
             }
         };
 
@@ -293,14 +293,14 @@ impl IssuerSM {
         trace!("Issuer::credential_status >>>");
 
         match self.state {
-            IssuerState::Finished(ref state) => state.status.code(),
+            IssuerFullState::Finished(ref state) => state.status.code(),
             _ => Status::Undefined.code()
         }
     }
 
     pub fn is_terminal_state(&self) -> bool {
         match self.state {
-            IssuerState::Finished(_) => true,
+            IssuerFullState::Finished(_) => true,
             _ => false
         }
     }
@@ -417,7 +417,7 @@ pub mod test {
 
             let issuer_sm = _issuer_sm();
 
-            assert_match!(IssuerState::Initial(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Initial(_), issuer_sm.state);
             assert_eq!(source_id(), issuer_sm.get_source_id());
         }
     }
@@ -432,7 +432,7 @@ pub mod test {
 
             let issuer_sm = _issuer_sm();
 
-            assert_match!(IssuerState::Initial(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Initial(_), issuer_sm.state);
         }
 
         #[test]
@@ -443,7 +443,7 @@ pub mod test {
             let mut issuer_sm = _issuer_sm();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialInit(None), _send_message()).unwrap();
 
-            assert_match!(IssuerState::OfferSent(_), issuer_sm.state);
+            assert_match!(IssuerFullState::OfferSent(_), issuer_sm.state);
         }
 
         #[test]
@@ -454,10 +454,10 @@ pub mod test {
             let mut issuer_sm = _issuer_sm();
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::Credential(_credential()), _send_message()).unwrap();
-            assert_match!(IssuerState::Initial(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Initial(_), issuer_sm.state);
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialRequest(_credential_request()), _send_message()).unwrap();
-            assert_match!(IssuerState::Initial(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Initial(_), issuer_sm.state);
         }
 
         #[test]
@@ -469,7 +469,7 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialInit(None), _send_message()).unwrap();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialRequest(_credential_request()), _send_message()).unwrap();
 
-            assert_match!(IssuerState::RequestReceived(_), issuer_sm.state);
+            assert_match!(IssuerFullState::RequestReceived(_), issuer_sm.state);
         }
 
         #[test]
@@ -481,7 +481,7 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialInit(None), _send_message()).unwrap();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialProposal(_credential_proposal()), _send_message()).unwrap();
 
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
             assert_eq!(Status::Failed(ProblemReport::default()).code(), issuer_sm.credential_status());
         }
 
@@ -494,7 +494,7 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialInit(None), _send_message()).unwrap();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::ProblemReport(_problem_report()), _send_message()).unwrap();
 
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
             assert_eq!(Status::Failed(ProblemReport::default()).code(), issuer_sm.credential_status());
         }
 
@@ -507,7 +507,7 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialInit(None), _send_message()).unwrap();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::Credential(_credential()), _send_message()).unwrap();
 
-            assert_match!(IssuerState::OfferSent(_), issuer_sm.state);
+            assert_match!(IssuerFullState::OfferSent(_), issuer_sm.state);
         }
 
         #[test]
@@ -520,7 +520,7 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialRequest(_credential_request()), _send_message()).unwrap();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialSend(), _send_message()).unwrap();
 
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
             assert_eq!(Status::Success.code(), issuer_sm.credential_status());
         }
 
@@ -534,7 +534,7 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialRequest(CredentialRequest::create()), _send_message()).unwrap();
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialSend(), _send_message()).unwrap();
 
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
             assert_eq!(Status::Failed(ProblemReport::default()).code(), issuer_sm.credential_status());
         }
 
@@ -549,10 +549,10 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialSend(), _send_message()).unwrap();
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialSend(), _send_message()).unwrap();
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialAck(_ack()), _send_message()).unwrap();
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
         }
 
         // TRANSITIONS TO/FROM CREDENTIAL SENT STATE AREN'T POSSIBLE NOW
@@ -568,13 +568,13 @@ pub mod test {
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialSend(), _send_message()).unwrap();
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialInit(None), _send_message()).unwrap();
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::CredentialRequest(_credential_request()), _send_message()).unwrap();
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
 
             issuer_sm = issuer_sm.handle_message(CredentialIssuanceMessage::Credential(_credential()), _send_message()).unwrap();
-            assert_match!(IssuerState::Finished(_), issuer_sm.state);
+            assert_match!(IssuerFullState::Finished(_), issuer_sm.state);
         }
     }
 
@@ -728,10 +728,10 @@ pub mod test {
         fn test_get_state() {
             let _setup = SetupMocks::init();
 
-            assert_eq!(VcxStateType::VcxStateInitialized as u32, _issuer_sm().state());
-            assert_eq!(VcxStateType::VcxStateOfferSent as u32, _issuer_sm().to_offer_sent_state().state());
-            assert_eq!(VcxStateType::VcxStateRequestReceived as u32, _issuer_sm().to_request_received_state().state());
-            assert_eq!(VcxStateType::VcxStateAccepted as u32, _issuer_sm().to_finished_state().state());
+            assert_eq!(IssuerState::Initial, _issuer_sm().get_state());
+            assert_eq!(IssuerState::OfferSent, _issuer_sm().to_offer_sent_state().get_state());
+            assert_eq!(IssuerState::RequestReceived, _issuer_sm().to_request_received_state().get_state());
+            assert_eq!(IssuerState::Finished, _issuer_sm().to_finished_state().get_state());
         }
     }
 

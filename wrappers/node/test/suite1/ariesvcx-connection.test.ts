@@ -9,7 +9,7 @@ import {
 } from 'helpers/entities';
 import { INVITE_ACCEPTED_MESSAGE } from 'helpers/test-constants';
 import { initVcxTestMode, shouldThrow, sleep } from 'helpers/utils';
-import { Connection, StateType, VCXCode, VCXMock, VCXMockMessage } from 'src';
+import { Connection, ConnectionStateType, VCXCode, VCXMock, VCXMockMessage } from 'src';
 
 describe('Connection:', () => {
   before(() => initVcxTestMode());
@@ -130,45 +130,48 @@ describe('Connection:', () => {
   });
 
   describe('updateState:', () => {
-    it(`returns ${StateType.None}: not initialized`, async () => {
+    it('throws error when not initialized', async () => {
+      let caught_error;
       const connection = new (Connection as any)();
-      const state1 = await connection.updateState();
-      const state2 = await connection.getState();
-      assert.equal(state1, state2);
-      assert.equal(state2, StateType.None);
+      try {
+        await connection.updateState();
+      } catch (err) {
+        caught_error = err;
+      }
+      assert.isNotNull(caught_error);
     });
 
-    it(`returns ${StateType.Initialized}: not connected`, async () => {
+    it(`returns ${ConnectionStateType.Null}: not connected`, async () => {
       const connection = await connectionCreateInviterNull({ id: 'alice' });
       await connection.updateState();
-      assert.equal(await connection.getState(), StateType.None);
+      assert.equal(await connection.getState(), ConnectionStateType.Null);
     });
 
     // todo : restore for aries
-    it.skip(`returns ${StateType.OfferSent}: connected`, async () => {
+    it.skip(`returns ${ConnectionStateType.Finished}: connected`, async () => {
       const connection = await createConnectionInviterRequested();
       VCXMock.setVcxMock(VCXMockMessage.AcceptInvite); // todo: must return Aries mock data
       await connection.updateState();
-      assert.equal(await connection.getState(), StateType.Accepted);
+      assert.equal(await connection.getState(), ConnectionStateType.Finished);
     });
 
     // todo : restore for aries
-    it.skip(`returns ${StateType.Accepted}: mocked accepted`, async () => {
+    it.skip(`returns ${ConnectionStateType.Finished}: mocked accepted`, async () => {
       const connection = await createConnectionInviterRequested();
       VCXMock.setVcxMock(VCXMockMessage.GetMessages);
       await connection.updateState();
-      assert.equal(await connection.getState(), StateType.Accepted);
+      assert.equal(await connection.getState(), ConnectionStateType.Finished);
     });
 
     // todo : restore for aries
-    it.skip(`returns ${StateType.Accepted}: mocked accepted`, async () => {
+    it.skip(`returns ${ConnectionStateType.Finished}: mocked accepted`, async () => {
       const connection = await createConnectionInviterRequested();
       await connection.updateStateWithMessage(INVITE_ACCEPTED_MESSAGE);
-      assert.equal(await connection.getState(), StateType.Accepted);
+      assert.equal(await connection.getState(), ConnectionStateType.Finished);
     });
 
     // todo : restore for aries
-    it.skip(`returns ${StateType.Accepted}: mocked accepted in parallel`, async () => {
+    it.skip(`returns ${ConnectionStateType.Finished}: mocked accepted in parallel`, async () => {
       const numConnections = 50;
       const interval = 50;
       const sleepTime = 100;
@@ -184,7 +187,7 @@ describe('Connection:', () => {
         const states = await Promise.all(
           connectionsWithTimers.map(({ connection }) => connection.getState()),
         );
-        cond = states.every((state) => state === StateType.Accepted);
+        cond = states.every((state) => state === ConnectionStateType.Finished);
         VCXMock.setVcxMock(VCXMockMessage.GetMessages);
         await sleep(sleepTime);
       }

@@ -623,6 +623,7 @@ mod tests {
     use crate::utils::devsetup::*;
     use crate::utils::mockdata::mock_settings::MockBuilder;
     use crate::utils::mockdata::mockdata_proof;
+    use crate::aries::handlers::proof_presentation::verifier::verifier::VerifierState;
 
     use super::*;
 
@@ -725,7 +726,7 @@ mod tests {
                                              Some(cb.get_callback())),
                    error::SUCCESS.code_num);
         let state = cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(state, VcxStateType::VcxStateInitialized as u32);
+        assert_eq!(state, VerifierState::Initial as u32);
     }
 
     #[test]
@@ -737,7 +738,7 @@ mod tests {
 
         let proof_handle = create_proof_util().unwrap();
 
-        assert_eq!(proof::get_state(proof_handle).unwrap(), VcxStateType::VcxStateInitialized as u32);
+        assert_eq!(proof::get_state(proof_handle).unwrap(), VerifierState::Initial as u32);
 
         let connection_handle = build_test_connection_inviter_requested();
 
@@ -749,7 +750,7 @@ mod tests {
                    error::SUCCESS.code_num);
         cb.receive(TimeoutUtils::some_medium()).unwrap();
 
-        assert_eq!(proof::get_state(proof_handle).unwrap(), VcxStateType::VcxStateOfferSent as u32);
+        assert_eq!(proof::get_state(proof_handle).unwrap(), VerifierState::PresentationRequestSent as u32);
 
         let cb = return_types_u32::Return_U32_U32::new().unwrap();
         assert_eq!(vcx_v2_proof_update_state_with_message(cb.command_handle,
@@ -760,7 +761,7 @@ mod tests {
                    error::SUCCESS.code_num);
         let _state = cb.receive(TimeoutUtils::some_medium()).unwrap();
 
-        assert_eq!(proof::get_state(proof_handle).unwrap(), VcxStateType::VcxStateAccepted as u32);
+        assert_eq!(proof::get_state(proof_handle).unwrap(), VerifierState::Finished as u32);
     }
 
     #[test]
@@ -808,6 +809,6 @@ mod tests {
         let rc = vcx_proof_get_state(cb.command_handle, handle, Some(cb.get_callback()));
         assert_eq!(rc, error::SUCCESS.code_num);
         let state = cb.receive(TimeoutUtils::some_short()).unwrap();
-        assert_eq!(state, VcxStateType::VcxStateOfferSent as u32);
+        assert_eq!(state, VerifierState::PresentationRequestSent as u32);
     }
 }

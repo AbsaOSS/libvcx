@@ -5,7 +5,7 @@ const axios = require('axios')
 const { buildRevocationDetails } = require('../src')
 const { createPairedAliceAndFaber } = require('./utils/utils')
 const { initRustapi } = require('../src/index')
-const { StateType } = require('@hyperledger/node-vcx-wrapper')
+const { IssuerStateType, HolderStateType, VerifierStateType, ProverStateType } = require('@hyperledger/node-vcx-wrapper')
 const uuid = require('uuid')
 const sleep = require('sleep-promise')
 const fs = require('fs')
@@ -27,9 +27,9 @@ describe('test tails distribution', () => {
       const tailsUrl = `http://127.0.0.1:${port}/${tailsUrlId}`
       await faber.sendCredentialOffer(buildRevocationDetails({ supportRevocation: true, tailsFile: `${__dirname}/tmp/faber/tails`, tailsUrl, maxCreds: 5 }))
       await alice.acceptCredentialOffer()
-      await faber.updateStateCredentialV2(StateType.RequestReceived)
+      await faber.updateStateCredentialV2(IssuerStateType.RequestReceived)
       await faber.sendCredential()
-      await alice.updateStateCredentialV2(StateType.Accepted)
+      await alice.updateStateCredentialV2(HolderStateType.Finished)
 
       const faberTailsHash = await faber.getTailsHash()
       const app = express()
@@ -47,8 +47,8 @@ describe('test tails distribution', () => {
 
       const request = await faber.requestProofFromAlice()
       await alice.sendHolderProof(JSON.parse(request), revRegId => aliceTailsFileDir)
-      await faber.updateStateVerifierProofV2(StateType.Accepted)
-      await alice.updateStateHolderProofV2(StateType.Accepted)
+      await faber.updateStateVerifierProofV2(VerifierStateType.Finished)
+      await alice.updateStateHolderProofV2(ProverStateType.Finished)
     } catch (err) {
       console.error(`err = ${err.message} stack = ${err.stack}`)
       if (server) {

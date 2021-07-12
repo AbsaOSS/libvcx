@@ -10,7 +10,6 @@ beforeAll(async () => {
 })
 
 describe('send ping, get ping', () => {
-
   it('Faber should send credential to Alice', async () => {
     try {
       const { alice, faber } = await createPairedAliceAndFaber()

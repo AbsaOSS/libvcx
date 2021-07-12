@@ -3,13 +3,20 @@ use crate::aries::handlers::proof_presentation::verifier::messages::VerifierMess
 use crate::aries::handlers::proof_presentation::verifier::state_machine::VerifierSM;
 use crate::aries::handlers::connection::connection::Connection;
 use crate::aries::messages::a2a::A2AMessage;
-use crate::aries::messages::proof_presentation::presentation::Presentation;
 use crate::aries::messages::proof_presentation::presentation_request::*;
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Verifier {
     verifier_sm: VerifierSM
+}
+
+#[derive(Debug, PartialEq)]
+pub enum VerifierState {
+    Initial,
+    PresentationRequestSent,
+    Finished,
+    Failed
 }
 
 impl Verifier {
@@ -36,9 +43,9 @@ impl Verifier {
 
     pub fn get_source_id(&self) -> String { self.verifier_sm.source_id() }
 
-    pub fn state(&self) -> u32 {
-        trace!("Verifier::state >>>");
-        self.verifier_sm.state()
+    pub fn get_state(&self) -> VerifierState {
+        trace!("Verifier::get_state >>>");
+        self.verifier_sm.get_state()
     }
 
     pub fn presentation_status(&self) -> u32 {
@@ -86,9 +93,9 @@ impl Verifier {
         self.verifier_sm.find_message_to_handle(messages)
     }
 
-    pub fn update_state(&mut self, connection: &Connection) -> VcxResult<u32> {
+    pub fn update_state(&mut self, connection: &Connection) -> VcxResult<VerifierState> {
         trace!("Verifier::update_state >>> ");
-        if !self.has_transitions() { return Ok(self.state()); }
+        if !self.has_transitions() { return Ok(self.get_state()); }
         let send_message = connection.send_message_closure()?;
 
         let messages = connection.get_messages()?;
@@ -96,6 +103,6 @@ impl Verifier {
             self.step(msg.into(), Some(&send_message))?;
             connection.update_message_status(uid)?;
         }
-        Ok(self.state())
+        Ok(self.get_state())
     }
 }

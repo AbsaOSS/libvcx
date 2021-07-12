@@ -947,8 +947,6 @@ pub extern fn vcx_disclosed_proof_release(handle: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    extern crate serde_json;
-
     use std::ffi::CString;
 
     use serde_json::Value;
@@ -963,6 +961,7 @@ mod tests {
     use crate::utils::mockdata::mock_settings::MockBuilder;
     use crate::utils::mockdata::mockdata_credex::ARIES_CREDENTIAL_REQUEST;
     use crate::utils::mockdata::mockdata_proof::ARIES_PROOF_REQUEST_PRESENTATION;
+    use crate::aries::handlers::proof_presentation::prover::prover::ProverState;
 
     use super::*;
 
@@ -1079,7 +1078,7 @@ mod tests {
         let _setup = SetupMocks::init();
 
         let handle_proof = _vcx_disclosed_proof_create_with_request_c_closure(ARIES_PROOF_REQUEST_PRESENTATION).unwrap();
-        assert_eq!(disclosed_proof::get_state(handle_proof).unwrap(), VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(disclosed_proof::get_state(handle_proof).unwrap(), ProverState::Initial as u32);
 
         let handle_conn = connection::tests::build_test_connection_inviter_requested();
 
@@ -1094,7 +1093,7 @@ mod tests {
         let _setup = SetupMocks::init();
 
         let handle = _vcx_disclosed_proof_create_with_request_c_closure(ARIES_PROOF_REQUEST_PRESENTATION).unwrap();
-        assert_eq!(disclosed_proof::get_state(handle).unwrap(), VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(disclosed_proof::get_state(handle).unwrap(), ProverState::Initial as u32);
 
         let connection_handle = connection::tests::build_test_connection_inviter_requested();
 
@@ -1111,7 +1110,7 @@ mod tests {
 
         let handle = _vcx_disclosed_proof_create_with_request_c_closure(ARIES_PROOF_REQUEST_PRESENTATION).unwrap();
 
-        assert_eq!(disclosed_proof::get_state(handle).unwrap(), VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(disclosed_proof::get_state(handle).unwrap(), ProverState::Initial as u32);
 
         let _connection_handle = connection::tests::build_test_connection_inviter_requested();
 
@@ -1145,7 +1144,7 @@ mod tests {
         let cb = return_types_u32::Return_U32_U32::new().unwrap();
         assert_eq!(vcx_disclosed_proof_get_state(cb.command_handle, handle, Some(cb.get_callback())), error::SUCCESS.code_num);
         let state = cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(state, VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(state, ProverState::Initial as u32);
     }
 
     #[test]

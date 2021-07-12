@@ -357,8 +357,6 @@ pub fn import(restore_config: &RestoreWalletConfigs) -> VcxResult<()> {
 pub mod tests {
     use agency_client::agency_settings;
 
-    use crate::api_lib;
-    use crate::api_lib::api_c;
     use crate::libindy::utils::signus::create_and_store_my_did;
     use crate::utils::devsetup::{SetupDefaults, SetupLibraryWallet, TempFile};
     use crate::utils::get_temp_dir_path;
@@ -544,7 +542,7 @@ pub mod tests {
         let id = "id1";
         let value = "value1";
 
-        api_c::vcx::vcx_shutdown(true);
+        // api_c::vcx::vcx_shutdown(true);
 
         let import_config = RestoreWalletConfigs {
             wallet_name: wallet_name.clone(),

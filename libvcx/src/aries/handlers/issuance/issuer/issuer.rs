@@ -18,6 +18,16 @@ pub struct IssuerConfig {
     pub tails_file: Option<String>
 }
 
+#[derive(Debug, PartialEq)]
+pub enum IssuerState {
+    Initial,
+    OfferSent,
+    RequestReceived,
+    CredentialSent,
+    Finished,
+    Failed
+}
+
 impl Issuer {
     pub fn create(issuer_config: &IssuerConfig, credential_data: &str, source_id: &str) -> VcxResult<Issuer> {
         trace!("Issuer::issuer_create_credential >>> issuer_config: {:?}, credential_data: {:?}, source_id: {:?}", issuer_config, credential_data, source_id);
@@ -34,8 +44,8 @@ impl Issuer {
         self.step(CredentialIssuanceMessage::CredentialSend(), Some(&send_message))
     }
 
-    pub fn get_state(&self) -> VcxResult<u32> {
-        Ok(self.issuer_sm.state())
+    pub fn get_state(&self) -> IssuerState {
+        self.issuer_sm.get_state()
     }
 
     pub fn get_source_id(&self) -> VcxResult<String> {
@@ -71,9 +81,9 @@ impl Issuer {
         Ok(())
     }
 
-    pub fn update_state(&mut self, connection: &Connection) -> VcxResult<u32> {
-        trace!("Issuer::update_state >>> ");
-        if self.is_terminal_state() { return self.get_state(); }
+    pub fn update_state(&mut self, connection: &Connection) -> VcxResult<IssuerState> {
+        trace!("Issuer::update_state >>>");
+        if self.is_terminal_state() { return Ok(self.get_state()); }
         let send_message = connection.send_message_closure()?;
 
         let messages = connection.get_messages()?;
@@ -81,6 +91,6 @@ impl Issuer {
             self.step(msg.into(), Some(&send_message))?;
             connection.update_message_status(uid)?;
         }
-        self.get_state()
+        Ok(self.get_state())
     }
 }

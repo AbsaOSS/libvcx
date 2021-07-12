@@ -2,7 +2,7 @@ const { getMessagesForConnection } = require('../utils/messages')
 const {
   updateMessages,
   Connection,
-  StateType
+  ConnectionStateType
 } = require('@hyperledger/node-vcx-wrapper')
 const { pollFunction } = require('../common')
 
@@ -50,7 +50,7 @@ module.exports.createServiceConnections = function createServiceConnections ({ l
 
   async function _progressConnectionToAcceptedState (connection, attemptsThreshold, timeoutMs) {
     async function progressToAcceptedState () {
-      if (await connection.updateState() !== StateType.Accepted) {
+      if (await connection.updateState() !== ConnectionStateType.Finished) {
         return { result: undefined, isFinished: false }
       } else {
         return { result: null, isFinished: true }

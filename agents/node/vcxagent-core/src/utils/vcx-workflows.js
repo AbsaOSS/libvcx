@@ -85,9 +85,10 @@ async function provisionAgentInAgency (agentName, genesisPath, agencyUrl, seed, 
   logger.debug(`Configuring issuer's wallet with seed: ${seed}`)
   const issuerConfig = JSON.parse(await configureIssuerWallet(seed))
   issuerConfig.institution_name = agentName
+  logger.debug(`Configured issuer wallet with config: ${JSON.stringify(issuerConfig, null, 2)}`)
   logger.debug(`Provisioning agent with config: ${JSON.stringify(agencyConfig, null, 2)}`)
   agencyConfig = JSON.parse(await provisionCloudAgent(agencyConfig))
-  logger.debug(`Provisined agent with config: ${JSON.stringify(agencyConfig, null, 2)}`)
+  logger.debug(`Provisioned agent with config: ${JSON.stringify(agencyConfig, null, 2)}`)
   await closeMainWallet()
 
   return { agencyConfig, issuerConfig, walletConfig }

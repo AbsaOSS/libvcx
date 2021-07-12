@@ -1,7 +1,7 @@
 /* eslint-env jest */
 require('jest')
-const {createPairedAliceAndFaber} = require('./utils/utils')
-const {initRustapi} = require('../src/index')
+const { createPairedAliceAndFaber } = require('./utils/utils')
+const { initRustapi } = require('../src/index')
 const sleep = require('sleep-promise')
 
 beforeAll(async () => {

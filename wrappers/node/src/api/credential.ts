@@ -3,7 +3,7 @@ import { Callback } from 'ffi-napi';
 import { VCXInternalError } from '../errors';
 import { rustAPI } from '../rustlib';
 import { createFFICallbackPromise } from '../utils/ffi-helpers';
-import { ISerializedData } from './common';
+import { ISerializedData, HolderStateType } from './common';
 import { Connection } from './connection';
 import { VCXBaseWithState } from './vcx-base-with-state';
 import { PaymentManager } from './vcx-payment-txn';
@@ -104,7 +104,7 @@ export class CredentialPaymentManager extends PaymentManager {
 /**
  * A Credential Object, which is issued by the issuing party to the prover and stored in the prover's wallet.
  */
-export class Credential extends VCXBaseWithState<ICredentialStructData> {
+export class Credential extends VCXBaseWithState<ICredentialStructData, HolderStateType> {
   /**
    * Creates a credential with an offer.
    *

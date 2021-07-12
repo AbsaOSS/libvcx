@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::api_lib::VcxStateType;
 use crate::aries::handlers::issuance::holder::states::finished::FinishedHolderState;
 use crate::aries::handlers::issuance::holder::states::offer_received::OfferReceivedState;
 use crate::aries::handlers::issuance::holder::states::request_sent::RequestSentState;
+use crate::aries::handlers::issuance::holder::holder::HolderState;
 use crate::aries::handlers::issuance::messages::CredentialIssuanceMessage;
 use crate::aries::messages::a2a::A2AMessage;
 use crate::aries::messages::error::ProblemReport;
@@ -16,7 +16,7 @@ use crate::error::prelude::*;
 use crate::libindy::utils::anoncreds::{self, get_cred_def_json, libindy_prover_create_credential_req, libindy_prover_delete_credential, libindy_prover_store_credential};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum HolderState {
+pub enum HolderFullState {
     OfferReceived(OfferReceivedState),
     RequestSent(RequestSentState),
     Finished(FinishedHolderState),
@@ -24,7 +24,7 @@ pub enum HolderState {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HolderSM {
-    state: HolderState,
+    state: HolderFullState,
     source_id: String,
     thread_id: String,
 }
@@ -33,7 +33,7 @@ impl HolderSM {
     pub fn new(offer: CredentialOffer, source_id: String) -> Self {
         HolderSM {
             thread_id: offer.id.0.clone(),
-            state: HolderState::OfferReceived(OfferReceivedState::new(offer)),
+            state: HolderFullState::OfferReceived(OfferReceivedState::new(offer)),
             source_id,
         }
     }
@@ -42,14 +42,14 @@ impl HolderSM {
         self.source_id.clone()
     }
 
-    pub fn state(&self) -> u32 {
+    pub fn get_state(&self) -> HolderState {
         match self.state {
-            HolderState::OfferReceived(_) => VcxStateType::VcxStateRequestReceived as u32,
-            HolderState::RequestSent(_) => VcxStateType::VcxStateOfferSent as u32,
-            HolderState::Finished(ref status) => {
+            HolderFullState::OfferReceived(_) => HolderState::OfferReceived,
+            HolderFullState::RequestSent(_) => HolderState::RequestSent,
+            HolderFullState::Finished(ref status) => {
                 match status.status {
-                    Status::Success => VcxStateType::VcxStateAccepted as u32,
-                    _ => VcxStateType::VcxStateNone as u32,
+                    Status::Success => HolderState::Finished,
+                    _ => HolderState::Failed
                 }
             }
         }
@@ -60,10 +60,10 @@ impl HolderSM {
 
         for (uid, message) in messages {
             match self.state {
-                HolderState::OfferReceived(_) => {
+                HolderFullState::OfferReceived(_) => {
                     // do not process messages
                 }
-                HolderState::RequestSent(_) => {
+                HolderFullState::RequestSent(_) => {
                     match message {
                         A2AMessage::Credential(credential) => {
                             if credential.from_thread(&self.thread_id) {
@@ -78,7 +78,7 @@ impl HolderSM {
                         _ => {}
                     }
                 }
-                HolderState::Finished(_) => {
+                HolderFullState::Finished(_) => {
                     // do not process messages
                 }
             };
@@ -87,7 +87,7 @@ impl HolderSM {
         None
     }
 
-    pub fn step(state: HolderState, source_id: String, thread_id: String) -> Self {
+    pub fn step(state: HolderFullState, source_id: String, thread_id: String) -> Self {
         HolderSM { state, source_id, thread_id }
     }
 
@@ -96,7 +96,7 @@ impl HolderSM {
 
         let HolderSM { state, source_id, thread_id } = self;
         let state = match state {
-            HolderState::OfferReceived(state_data) => match cim {
+            HolderFullState::OfferReceived(state_data) => match cim {
                 CredentialIssuanceMessage::CredentialRequestSend(my_pw_did) => {
                     let request = _make_credential_request(my_pw_did, &state_data.offer);
                     match request {
@@ -106,7 +106,7 @@ impl HolderSM {
                             send_message.ok_or(
                                 VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                             )?(&cred_request.to_a2a_message())?;
-                            HolderState::RequestSent((state_data, req_meta, cred_def_json).into())
+                            HolderFullState::RequestSent((state_data, req_meta, cred_def_json).into())
                         }
                         Err(err) => {
                             let problem_report = ProblemReport::create()
@@ -115,16 +115,16 @@ impl HolderSM {
                             send_message.ok_or(
                                 VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                             )?(&problem_report.to_a2a_message())?;
-                            HolderState::Finished((state_data, problem_report).into())
+                            HolderFullState::Finished((state_data, problem_report).into())
                         }
                     }
                 }
                 _ => {
                     warn!("Credential Issuance can only start on holder side with Credential Offer");
-                    HolderState::OfferReceived(state_data)
+                    HolderFullState::OfferReceived(state_data)
                 }
             },
-            HolderState::RequestSent(state_data) => match cim {
+            HolderFullState::RequestSent(state_data) => match cim {
                 CredentialIssuanceMessage::Credential(credential) => {
                     let result = _store_credential(&credential, &state_data.req_meta, &state_data.cred_def_json);
                     match result {
@@ -136,7 +136,7 @@ impl HolderSM {
                                 )?(&A2AMessage::CredentialAck(ack))?;
                             }
 
-                            HolderState::Finished((state_data, cred_id, credential, rev_reg_def_json).into())
+                            HolderFullState::Finished((state_data, cred_id, credential, rev_reg_def_json).into())
                         }
                         Err(err) => {
                             let problem_report = ProblemReport::create()
@@ -145,21 +145,21 @@ impl HolderSM {
                             send_message.ok_or(
                                 VcxError::from_msg(VcxErrorKind::InvalidState, "Attempted to call undefined send_message callback")
                             )?(&problem_report.to_a2a_message())?;
-                            HolderState::Finished((state_data, problem_report).into())
+                            HolderFullState::Finished((state_data, problem_report).into())
                         }
                     }
                 }
                 CredentialIssuanceMessage::ProblemReport(problem_report) => {
-                    HolderState::Finished((state_data, problem_report).into())
+                    HolderFullState::Finished((state_data, problem_report).into())
                 }
                 _ => {
                     warn!("In this state Credential Issuance can accept only Credential and Problem Report");
-                    HolderState::RequestSent(state_data)
+                    HolderFullState::RequestSent(state_data)
                 }
             },
-            HolderState::Finished(state_data) => {
+            HolderFullState::Finished(state_data) => {
                 warn!("Exchange is finished, no messages can be sent or received");
-                HolderState::Finished(state_data)
+                HolderFullState::Finished(state_data)
             }
         };
         Ok(HolderSM::step(state, source_id, thread_id))
@@ -167,21 +167,21 @@ impl HolderSM {
 
     pub fn credential_status(&self) -> u32 {
         match self.state {
-            HolderState::Finished(ref state) => state.status.code(),
+            HolderFullState::Finished(ref state) => state.status.code(),
             _ => Status::Undefined.code()
         }
     }
 
     pub fn is_terminal_state(&self) -> bool {
         match self.state {
-            HolderState::Finished(_) => true,
+            HolderFullState::Finished(_) => true,
             _ => false
         }
     }
 
     pub fn get_credential(&self) -> VcxResult<(String, A2AMessage)> {
         match self.state {
-            HolderState::Finished(ref state) => {
+            HolderFullState::Finished(ref state) => {
                 let cred_id = state.cred_id.clone().ok_or(VcxError::from_msg(VcxErrorKind::InvalidState, "Cannot get credential: Credential Id not found"))?;
                 let credential = state.credential.clone().ok_or(VcxError::from_msg(VcxErrorKind::InvalidState, "Cannot get credential: Credential not found"))?;
                 Ok((cred_id, credential.to_a2a_message()))
@@ -192,46 +192,46 @@ impl HolderSM {
 
     pub fn get_attributes(&self) -> VcxResult<String> {
         match self.state {
-            HolderState::Finished(ref state) => state.get_attributes(),
-            HolderState::OfferReceived(ref state) => state.get_attributes(),
+            HolderFullState::Finished(ref state) => state.get_attributes(),
+            HolderFullState::OfferReceived(ref state) => state.get_attributes(),
             _ => Err(VcxError::from_msg(VcxErrorKind::NotReady, "Cannot get credential attributes: credential offer or credential must be receieved first"))
         }
     }
 
     pub fn get_attachment(&self) -> VcxResult<String> {
         match self.state {
-            HolderState::Finished(ref state) => state.get_attachment(),
-            HolderState::OfferReceived(ref state) => state.get_attachment(),
+            HolderFullState::Finished(ref state) => state.get_attachment(),
+            HolderFullState::OfferReceived(ref state) => state.get_attachment(),
             _ => Err(VcxError::from_msg(VcxErrorKind::NotReady, "Cannot get credential attachment: credential offer or credential must be receieved first"))
         }
     }
 
     pub fn get_tails_location(&self) -> VcxResult<String> {
         match self.state {
-            HolderState::Finished(ref state) => state.get_tails_location(),
+            HolderFullState::Finished(ref state) => state.get_tails_location(),
             _ => Err(VcxError::from_msg(VcxErrorKind::NotReady, "Cannot get tails location: credential exchange not finished yet"))
         }
     }
 
     pub fn get_tails_hash(&self) -> VcxResult<String> {
         match self.state {
-            HolderState::Finished(ref state) => state.get_tails_hash(),
+            HolderFullState::Finished(ref state) => state.get_tails_hash(),
             _ => Err(VcxError::from_msg(VcxErrorKind::NotReady, "Cannot get tails hash: credential exchange not finished yet"))
         }
     }
 
     pub fn get_rev_reg_id(&self) -> VcxResult<String> {
         match self.state {
-            HolderState::Finished(ref state) => state.get_rev_reg_id(),
+            HolderFullState::Finished(ref state) => state.get_rev_reg_id(),
             _ => Err(VcxError::from_msg(VcxErrorKind::NotReady, "Cannot get tails hash: credential exchange not finished yet"))
         }
     }
 
     pub fn is_revokable(&self) -> VcxResult<bool> {
         match self.state {
-            HolderState::OfferReceived(ref state) => state.is_revokable(),
-            HolderState::RequestSent(ref state) => state.is_revokable(),
-            HolderState::Finished(ref state) => state.is_revokable()
+            HolderFullState::OfferReceived(ref state) => state.is_revokable(),
+            HolderFullState::RequestSent(ref state) => state.is_revokable(),
+            HolderFullState::Finished(ref state) => state.is_revokable()
         }
     }
 
@@ -239,7 +239,7 @@ impl HolderSM {
         trace!("Holder::delete_credential");
 
         match self.state {
-            HolderState::Finished(ref state) => {
+            HolderFullState::Finished(ref state) => {
                 let cred_id = state.cred_id.clone().ok_or(VcxError::from_msg(VcxErrorKind::InvalidState, "Cannot get credential: credential id not found"))?;
                 _delete_credential(&cred_id)
             }
@@ -362,7 +362,7 @@ mod test {
 
             let holder_sm = _holder_sm();
 
-            assert_match!(HolderState::OfferReceived(_), holder_sm.state);
+            assert_match!(HolderFullState::OfferReceived(_), holder_sm.state);
             assert_eq!(source_id(), holder_sm.get_source_id());
         }
     }
@@ -376,7 +376,7 @@ mod test {
             let _setup = SetupMocks::init();
 
             let holder_sm = _holder_sm();
-            assert_match!(HolderState::OfferReceived(_), holder_sm.state);
+            assert_match!(HolderFullState::OfferReceived(_), holder_sm.state);
         }
 
         #[test]
@@ -387,7 +387,7 @@ mod test {
             let mut holder_sm = _holder_sm();
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialRequestSend(_my_pw_did()), _send_message()).unwrap();
 
-            assert_match!(HolderState::RequestSent(_), holder_sm.state);
+            assert_match!(HolderFullState::RequestSent(_), holder_sm.state);
         }
 
         #[test]
@@ -400,7 +400,7 @@ mod test {
             let mut holder_sm = HolderSM::new(credential_offer, "test source".to_string());
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialRequestSend(_my_pw_did()), _send_message()).unwrap();
 
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
             assert_eq!(Status::Failed(ProblemReport::default()).code(), holder_sm.credential_status());
         }
 
@@ -411,10 +411,10 @@ mod test {
 
             let mut holder_sm = _holder_sm();
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialSend(), _send_message()).unwrap();
-            assert_match!(HolderState::OfferReceived(_), holder_sm.state);
+            assert_match!(HolderFullState::OfferReceived(_), holder_sm.state);
 
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::ProblemReport(_problem_report()), _send_message()).unwrap();
-            assert_match!(HolderState::OfferReceived(_), holder_sm.state);
+            assert_match!(HolderFullState::OfferReceived(_), holder_sm.state);
         }
 
         #[test]
@@ -426,7 +426,7 @@ mod test {
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialRequestSend(_my_pw_did()), _send_message()).unwrap();
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::Credential(_credential()), _send_message()).unwrap();
 
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
             assert_eq!(Status::Success.code(), holder_sm.credential_status());
         }
 
@@ -439,7 +439,7 @@ mod test {
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialRequestSend(_my_pw_did()), _send_message()).unwrap();
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::Credential(Credential::create()), _send_message()).unwrap();
 
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
             assert_eq!(Status::Failed(ProblemReport::default()).code(), holder_sm.credential_status());
         }
 
@@ -452,7 +452,7 @@ mod test {
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialRequestSend(_my_pw_did()), _send_message()).unwrap();
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::ProblemReport(_problem_report()), _send_message()).unwrap();
 
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
             assert_eq!(Status::Failed(ProblemReport::default()).code(), holder_sm.credential_status());
         }
 
@@ -465,10 +465,10 @@ mod test {
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialRequestSend(_my_pw_did()), _send_message()).unwrap();
 
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialOffer(_credential_offer()), _send_message()).unwrap();
-            assert_match!(HolderState::RequestSent(_), holder_sm.state);
+            assert_match!(HolderFullState::RequestSent(_), holder_sm.state);
 
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialAck(_ack()), _send_message()).unwrap();
-            assert_match!(HolderState::RequestSent(_), holder_sm.state);
+            assert_match!(HolderFullState::RequestSent(_), holder_sm.state);
         }
 
         #[test]
@@ -481,13 +481,13 @@ mod test {
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::Credential(_credential()), _send_message()).unwrap();
 
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialOffer(_credential_offer()), _send_message()).unwrap();
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
 
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::Credential(_credential()), _send_message()).unwrap();
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
 
             holder_sm = holder_sm.handle_message(CredentialIssuanceMessage::CredentialAck(_ack()), _send_message()).unwrap();
-            assert_match!(HolderState::Finished(_), holder_sm.state);
+            assert_match!(HolderFullState::Finished(_), holder_sm.state);
         }
     }
 
@@ -610,9 +610,9 @@ mod test {
         fn test_get_state() {
             let _setup = SetupMocks::init();
 
-            assert_eq!(VcxStateType::VcxStateRequestReceived as u32, _holder_sm().state());
-            assert_eq!(VcxStateType::VcxStateOfferSent as u32, _holder_sm().to_request_sent_state().state());
-            assert_eq!(VcxStateType::VcxStateAccepted as u32, _holder_sm().to_finished_state().state());
+            assert_eq!(HolderState::OfferReceived, _holder_sm().get_state());
+            assert_eq!(HolderState::RequestSent, _holder_sm().to_request_sent_state().get_state());
+            assert_eq!(HolderState::Finished, _holder_sm().to_finished_state().get_state());
         }
     }
 

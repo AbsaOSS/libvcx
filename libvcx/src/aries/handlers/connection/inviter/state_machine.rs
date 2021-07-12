@@ -37,7 +37,7 @@ pub enum InviterFullState {
     Completed(CompleteState),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum InviterState {
     Null,
     Invited,

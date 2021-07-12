@@ -2,7 +2,6 @@ use std::ptr;
 
 use indy_sys::CommandHandle;
 use libc::c_char;
-use serde_json;
 
 use crate::api_lib::api_handle::credential_def;
 use crate::api_lib::utils_c::cstring::CStringUtils;
@@ -516,11 +515,9 @@ pub extern fn vcx_credentialdef_get_rev_reg_id(command_handle: CommandHandle,
 
 #[cfg(test)]
 mod tests {
-    extern crate serde_json;
-
     use std::ffi::CString;
 
-    use crate::{api_lib, settings, utils};
+    use crate::{api_lib, utils};
     use crate::api_lib::utils_c::return_types_u32;
     use crate::api_lib::utils_c::timeout::TimeoutUtils;
     use crate::utils::constants::SCHEMA_ID;

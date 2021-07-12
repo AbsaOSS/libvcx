@@ -7,7 +7,6 @@ use crate::api_lib::api_handle::{connection, credential_def, issuer_credential};
 use crate::api_lib::utils_c::cstring::CStringUtils;
 use crate::api_lib::utils_c::runtime::execute;
 use crate::error::prelude::*;
-use crate::settings;
 use crate::utils::error;
 
 /*
@@ -94,16 +93,7 @@ pub extern fn vcx_issuer_create_credential(command_handle: CommandHandle,
     check_useful_c_str!(credential_name, VcxErrorKind::InvalidOption);
     check_useful_c_str!(source_id, VcxErrorKind::InvalidOption);
     check_useful_c_str!(price, VcxErrorKind::InvalidOption);
-
-    let issuer_did: String = if !issuer_did.is_null() {
-        check_useful_c_str!(issuer_did, VcxErrorKind::InvalidOption);
-        issuer_did.to_owned()
-    } else {
-        match settings::get_config_value(settings::CONFIG_INSTITUTION_DID) {
-            Ok(x) => x,
-            Err(x) => return x.into()
-        }
-    };
+    check_useful_c_str!(issuer_did, VcxErrorKind::InvalidOption);
 
     let price: u64 = match price.parse::<u64>() {
         Ok(x) => x,
@@ -858,6 +848,7 @@ pub mod tests {
     use crate::utils::devsetup::*;
     use crate::utils::get_temp_dir_path;
     use crate::utils::mockdata::mockdata_credex::{ARIES_CREDENTIAL_REQUEST, CREDENTIAL_ISSUER_SM_FINISHED};
+    use crate::aries::handlers::issuance::issuer::issuer::IssuerState;
 
     use super::*;
 
@@ -1022,7 +1013,7 @@ pub mod tests {
                                                                       CString::new(ARIES_CREDENTIAL_REQUEST).unwrap().into_raw(),
                                                                       Some(cb.get_callback())), error::SUCCESS.code_num);
         let state = cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(state, VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(state, IssuerState::RequestReceived as u32);
     }
 
     #[test]
@@ -1057,7 +1048,7 @@ pub mod tests {
                                                          connection_handle,
                                                          Some(cb.get_callback())), error::SUCCESS.code_num);
         let state = cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(state, VcxStateType::VcxStateOfferSent as u32);
+        assert_eq!(state, IssuerState::OfferSent as u32);
     }
 
 
@@ -1152,7 +1143,7 @@ pub mod tests {
                                                    Some(cb.get_callback())),
                    error::SUCCESS.code_num);
         let state = cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(state, VcxStateType::VcxStateInitialized as u32);
+        assert_eq!(state, IssuerState::Initial as u32);
     }
 
     #[test]

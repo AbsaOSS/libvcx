@@ -164,7 +164,7 @@ pub mod test {
             alice.credential_handle = credential_handle;
 
             credential::send_credential_request(alice.credential_handle, alice_connection_by_handle).unwrap();
-            assert_eq!(2, credential::get_state(alice.credential_handle).unwrap());
+            assert_eq!(1, credential::get_state(alice.credential_handle).unwrap());
         }
 
         faber.send_credential();
@@ -183,11 +183,11 @@ pub mod test {
             let credentials = alice.get_credentials_for_presentation();
 
             disclosed_proof::generate_proof(alice.presentation_handle, credentials.to_string(), String::from("{}")).unwrap();
-            assert_eq!(3, disclosed_proof::get_state(alice.presentation_handle).unwrap());
+            assert_eq!(1, disclosed_proof::get_state(alice.presentation_handle).unwrap());
 
             let alice_connection_by_handle = connection::store_connection(alice.connection.clone()).unwrap();
             disclosed_proof::send_proof(alice.presentation_handle, alice_connection_by_handle).unwrap();
-            assert_eq!(2, disclosed_proof::get_state(alice.presentation_handle).unwrap());
+            assert_eq!(3, disclosed_proof::get_state(alice.presentation_handle).unwrap());
         }
 
         faber.verify_presentation();
@@ -235,7 +235,7 @@ pub mod test {
 
             let alice_connection_by_handle = connection::store_connection(alice.connection.clone()).unwrap();
             credential::send_credential_request(alice.credential_handle, alice_connection_by_handle).unwrap();
-            assert_eq!(2, credential::get_state(alice.credential_handle).unwrap());
+            assert_eq!(1, credential::get_state(alice.credential_handle).unwrap());
         }
 
         faber.send_credential();
@@ -255,11 +255,11 @@ pub mod test {
             let credentials = alice.get_credentials_for_presentation();
 
             disclosed_proof::generate_proof(alice.presentation_handle, credentials.to_string(), String::from("{}")).unwrap();
-            assert_eq!(3, disclosed_proof::get_state(alice.presentation_handle).unwrap());
+            assert_eq!(1, disclosed_proof::get_state(alice.presentation_handle).unwrap());
 
             let alice_connection_by_handle = connection::store_connection(alice.connection.clone()).unwrap();
             disclosed_proof::send_proof(alice.presentation_handle, alice_connection_by_handle).unwrap();
-            assert_eq!(2, disclosed_proof::get_state(alice.presentation_handle).unwrap());
+            assert_eq!(3, disclosed_proof::get_state(alice.presentation_handle).unwrap());
         }
 
         faber.verify_presentation();

@@ -8,7 +8,6 @@ use crate::api_lib::api_handle::connection;
 use crate::api_lib::utils_c;
 use crate::api_lib::utils_c::cstring::CStringUtils;
 use crate::api_lib::utils_c::runtime::execute;
-use crate::aries::messages::a2a::A2AMessage;
 use crate::error::prelude::*;
 use crate::libindy;
 use crate::utils::error;
@@ -548,13 +547,8 @@ pub extern fn vcx_connection_update_state_with_message(command_handle: CommandHa
         return VcxError::from(VcxErrorKind::InvalidConnectionHandle).into();
     }
 
-    let message: A2AMessage = match serde_json::from_str(&message) {
-        Ok(x) => x,
-        Err(_) => return VcxError::from(VcxErrorKind::InvalidJson).into(),
-    };
-
     execute(move || {
-        let result = update_state_with_message(connection_handle, message);
+        let result = update_state_with_message(connection_handle, &message);
 
         let rc = match result {
             Ok(x) => {

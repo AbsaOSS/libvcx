@@ -7,7 +7,7 @@ import {
   issuerCredentialCreate,
 } from 'helpers/entities';
 import { initVcxTestMode, shouldThrow } from 'helpers/utils';
-import { Connection, IssuerCredential, StateType, VCXCode } from 'src';
+import { Connection, IssuerCredential, IssuerStateType, VCXCode } from 'src';
 
 describe('IssuerCredential:', () => {
   before(() => initVcxTestMode());
@@ -120,7 +120,7 @@ describe('IssuerCredential:', () => {
       const issuerCredential = await issuerCredentialCreate();
       const connection = await createConnectionInviterRequested();
       await issuerCredential.sendOffer(connection);
-      assert.equal(await issuerCredential.getState(), StateType.OfferSent);
+      assert.equal(await issuerCredential.getState(), IssuerStateType.OfferSent);
     });
   });
 
@@ -129,7 +129,7 @@ describe('IssuerCredential:', () => {
       const connection = await createConnectionInviterRequested();
       const issuerCredential = await issuerCredentialCreate();
       await issuerCredential.sendOffer(connection);
-      assert.equal(await issuerCredential.getState(), StateType.OfferSent);
+      assert.equal(await issuerCredential.getState(), IssuerStateType.OfferSent);
     });
 
     it('throws: not initialized', async () => {

@@ -989,8 +989,6 @@ pub extern fn vcx_credential_get_payment_txn(command_handle: CommandHandle,
 
 #[cfg(test)]
 mod tests {
-    extern crate serde_json;
-
     use std::ffi::CString;
 
     use serde_json::Value;
@@ -1004,6 +1002,7 @@ mod tests {
     use crate::utils::constants::{GET_MESSAGES_DECRYPTED_RESPONSE, V3_OBJECT_SERIALIZE_VERSION};
     use crate::utils::devsetup::*;
     use crate::utils::mockdata::mockdata_credex::{ARIES_CREDENTIAL_OFFER, ARIES_CREDENTIAL_RESPONSE, CREDENTIAL_SM_FINISHED};
+    use crate::aries::handlers::issuance::holder::holder::HolderState;
 
     use super::*;
 
@@ -1066,21 +1065,6 @@ mod tests {
 
     #[test]
     #[cfg(feature = "general_test")]
-    fn test_vcx_credential_send_request() {
-        let _setup = SetupMocks::init();
-
-        let handle = credential::credential_create_with_offer("test_send_request", ARIES_CREDENTIAL_OFFER).unwrap();
-        assert_eq!(credential::get_state(handle).unwrap(), VcxStateType::VcxStateRequestReceived as u32);
-
-        let connection_handle = connection::tests::build_test_connection_inviter_requested();
-
-        let cb = return_types_u32::Return_U32::new().unwrap();
-        assert_eq!(vcx_credential_send_request(cb.command_handle, handle, connection_handle, 0, Some(cb.get_callback())), error::SUCCESS.code_num);
-        cb.receive(TimeoutUtils::some_medium()).unwrap();
-    }
-
-    #[test]
-    #[cfg(feature = "general_test")]
     fn test_vcx_credential_get_new_offers() {
         let _setup = SetupMocks::init();
 
@@ -1119,7 +1103,7 @@ mod tests {
 
         let cb = return_types_u32::Return_U32_U32::new().unwrap();
         assert_eq!(vcx_credential_get_state(cb.command_handle, handle, Some(cb.get_callback())), error::SUCCESS.code_num);
-        assert_eq!(cb.receive(TimeoutUtils::some_medium()).unwrap(), VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(cb.receive(TimeoutUtils::some_medium()).unwrap(), HolderState::OfferReceived as u32);
     }
 
     #[test]
@@ -1130,20 +1114,20 @@ mod tests {
         let handle_conn = connection::tests::build_test_connection_inviter_requested();
 
         let handle_cred = _vcx_credential_create_with_offer_c_closure(ARIES_CREDENTIAL_OFFER).unwrap();
-        assert_eq!(credential::get_state(handle_cred).unwrap(), VcxStateType::VcxStateRequestReceived as u32);
+        assert_eq!(credential::get_state(handle_cred).unwrap(), HolderState::OfferReceived as u32);
         debug!("credential handle = {}", handle_cred);
 
         let cb = return_types_u32::Return_U32::new().unwrap();
         assert_eq!(vcx_credential_send_request(cb.command_handle, handle_cred, handle_conn, 0, Some(cb.get_callback())), error::SUCCESS.code_num);
         cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(credential::get_state(handle_cred).unwrap(), VcxStateType::VcxStateOfferSent as u32);
+        assert_eq!(credential::get_state(handle_cred).unwrap(), HolderState::RequestSent as u32);
 
         AgencyMockDecrypted::set_next_decrypted_response(GET_MESSAGES_DECRYPTED_RESPONSE);
         AgencyMockDecrypted::set_next_decrypted_message(ARIES_CREDENTIAL_RESPONSE);
         let cb = return_types_u32::Return_U32_U32::new().unwrap();
         assert_eq!(vcx_v2_credential_update_state(cb.command_handle, handle_cred, handle_conn, Some(cb.get_callback())), error::SUCCESS.code_num);
         cb.receive(TimeoutUtils::some_medium()).unwrap();
-        assert_eq!(credential::get_state(handle_cred).unwrap(), VcxStateType::VcxStateAccepted as u32);
+        assert_eq!(credential::get_state(handle_cred).unwrap(), HolderState::Finished as u32);
 
         let cb = return_types_u32::Return_U32_STR::new().unwrap();
         assert_eq!(vcx_credential_get_rev_reg_id(cb.command_handle, handle_cred, Some(cb.get_callback())), error::SUCCESS.code_num);
