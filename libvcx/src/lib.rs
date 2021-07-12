@@ -67,7 +67,7 @@ mod tests {
         get_temp_dir_path,
     };
     use crate::utils::devsetup::*;
-    use crate::utils::devsetup_agent::test::{Alice, Faber, TestAgent};
+    use crate::api_lib::api_handle::devsetup_agent::test::{Alice, Faber, TestAgent};
     use crate::aries::handlers::issuance::holder::holder::HolderState;
     use crate::aries::handlers::issuance::issuer::issuer::IssuerState;
     use crate::aries::handlers::proof_presentation::prover::prover::ProverState;

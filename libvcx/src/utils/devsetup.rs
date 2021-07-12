@@ -11,7 +11,7 @@ use crate::libindy::utils::pool::tests::{create_test_ledger_config, delete_test_
 use crate::libindy::utils::wallet::{close_main_wallet, create_and_open_as_main_wallet, create_indy_wallet, delete_wallet, reset_wallet_handle, WalletConfig};
 use crate::settings::set_testing_defaults;
 use crate::utils::constants;
-use crate::utils::devsetup_agent::test::{Alice, Faber, TestAgent};
+use crate::api_lib::api_handle::devsetup_agent::test::{Faber, TestAgent};
 use crate::utils::file::write_file;
 use crate::utils::get_temp_dir_path;
 use crate::utils::logger::LibvcxDefaultLogger;
@@ -239,7 +239,7 @@ impl Drop for SetupIndyMocks {
 impl SetupLibraryWalletPoolZeroFees {
     pub fn init() -> SetupLibraryWalletPoolZeroFees {
         setup(ThreadpoolConfig { num_threads: Some(4) });
-        let faber= setup_indy_env(true);
+        let faber = setup_indy_env(true);
         SetupLibraryWalletPoolZeroFees { faber }
     }
 }

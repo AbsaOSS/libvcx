@@ -50,7 +50,6 @@ pub mod plugins;
 #[macro_use]
 pub mod logger;
 pub mod validation;
-pub mod devsetup_agent;
 pub mod serialization;
 
 pub fn get_temp_dir_path(filename: &str) -> PathBuf {

@@ -1,4 +1,3 @@
-
 pub const SERIALIZE_VERSION: &'static str = "2.0";
 
 #[cfg(test)]
@@ -151,7 +150,6 @@ pub mod test {
             close_main_wallet().unwrap();
             faber
         }
-
 
         pub fn create_schema(&mut self) {
             self.activate().unwrap();

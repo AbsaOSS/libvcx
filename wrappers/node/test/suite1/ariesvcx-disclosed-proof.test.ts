@@ -120,7 +120,7 @@ describe('DisclosedProof', () => {
   });
 
   describe('updateState:', () => {
-    it('Throws error when not initialized', async () => {
+    it('throws error when not initialized', async () => {
       let caught_error;
       const disclosedProof = new (DisclosedProof as any)();
       const connection = await createConnectionInviterRequested();
