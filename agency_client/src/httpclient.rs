@@ -8,7 +8,7 @@ use crate::error::{AgencyClientErrorKind, AgencyClientError, AgencyClientResult}
 use crate::mocking::{AgencyMock, AgencyMockDecrypted, HttpClientMockResponse};
 use crate::mocking;
 
-pub fn post_message(body_content: &Vec<u8>, url: &str) -> AgencyClientResult<Vec<u8>> {
+pub async fn post_message(body_content: &Vec<u8>, url: &str) -> AgencyClientResult<Vec<u8>> {
     // todo: this function should be general, not knowing that agency exists -> move agency mocks to agency module
     if mocking::agency_mocks_enabled() {
         if HttpClientMockResponse::has_response() {
@@ -36,30 +36,24 @@ pub fn post_message(body_content: &Vec<u8>, url: &str) -> AgencyClientResult<Vec
     })?;
     debug!("Posting encrypted bundle to: \"{}\"", url);
 
-    let mut response =
+    let response =
         client.post(url)
             .body(body_content.to_owned())
             .header(CONTENT_TYPE, "application/ssi-agent-wire")
             .send()
+            .await
             .map_err(|err| {
                 error!("error: {}", err);
                 AgencyClientError::from_msg(AgencyClientErrorKind::PostMessageFailed, format!("Could not connect {:?}", err))
             })?;
     trace!("Response Header: {:?}", response);
+
     if !response.status().is_success() {
-        let mut content = String::new();
-        match response.read_to_string(&mut content) {
-            Ok(_) => info!("Request failed: {}", content),
-            Err(_) => info!("could not read response"),
-        };
+        let content = response.text().await.or(Err(AgencyClientError::from_msg(AgencyClientErrorKind::PostMessageFailed, "could not read response")))?.clone();
         return Err(AgencyClientError::from_msg(AgencyClientErrorKind::PostMessageFailed, format!("POST failed with: {}", content)));
     }
 
-    let mut content = Vec::new();
-    response.read_to_end(&mut content)
-        .or(Err(AgencyClientError::from_msg(AgencyClientErrorKind::PostMessageFailed, "could not read response")))?;
-
-    Ok(content)
+    Ok(response.bytes().await.or(Err(AgencyClientError::from_msg(AgencyClientErrorKind::IOError, "Failed to convert response to bytes")))?.as_ref().to_vec())
 }
 
 fn set_ssl_cert_location() {

@@ -1,5 +1,5 @@
 use indy::crypto;
-use futures::Future;
+use crate::indy::future::Future;
 use crate::mocking::agency_mocks_enabled;
 use crate::error::AgencyClientResult;
 
