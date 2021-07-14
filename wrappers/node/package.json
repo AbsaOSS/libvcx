@@ -3,7 +3,7 @@
   "name": "@hyperledger/node-vcx-wrapper",
   "description": "NodeJS wrapper Aries Framework",
   "license": "Apache-2.0",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "directories": {
     "test": "test",
     "build": "dist",

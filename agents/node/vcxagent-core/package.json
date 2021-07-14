@@ -67,6 +67,6 @@
     "winston": "^3.3.3"
   },
   "peerDependencies": {
-    "@hyperledger/node-vcx-wrapper": "^0.19.0"
+    "@hyperledger/node-vcx-wrapper": "^0.20.0"
   }
 }
