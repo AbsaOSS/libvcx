@@ -14,18 +14,19 @@ RUN addgroup -g $GID indy && adduser -u $UID -D -G indy indy
 RUN apk update && apk upgrade && \
     apk add --no-cache \
         build-base \
-        cargo \
         git \
+        curl \
         libsodium-dev \
         libzmq \
         openssl-dev \
         zeromq-dev
 
-ARG RUST_VER="1.53.0"
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUST_VER
-
 USER indy
 WORKDIR /home/indy
+
+ARG RUST_VER="1.53.0"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUST_VER --default-host x86_64-unknown-linux-musl
+ENV PATH="/home/indy/.cargo/bin:$PATH" RUSTFLAGS="-C target-feature=-crt-static"
 
 RUN git clone $INDYSDK_REPO && cd indy-sdk && git checkout $INDYSDK_REVISION
 

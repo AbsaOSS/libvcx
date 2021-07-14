@@ -17,3 +17,4 @@ Specs/
 docs/
 .github/
 .idea/
+**/*.dockerfile

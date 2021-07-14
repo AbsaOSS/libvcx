@@ -6,7 +6,7 @@ WORKDIR /home/indy
 COPY --chown=indy  ./ ./
 
 USER indy
-ENV X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR "true"
+ENV X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_NO_VENDOR "true"
 RUN cargo build --release --manifest-path=/home/indy/Cargo.toml
 
 USER root
@@ -32,7 +32,7 @@ RUN echo '@alpine38 http://dl-cdn.alpinelinux.org/alpine/v3.8/main' >> /etc/apk/
 RUN apk update && apk upgrade
 RUN apk add --no-cache \
         bash \
-        cargo \
+        curl \
         g++ \
         gcc \
         git \
@@ -45,15 +45,13 @@ RUN apk add --no-cache \
         python2 \
         zeromq-dev
 
-ARG RUST_VER="1.53.0"
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUST_VER
+USER node
 
+ARG RUST_VER="1.53.0"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUST_VER --default-host x86_64-unknown-linux-musl
+ENV PATH="/home/node/.cargo/bin:$PATH" RUSTFLAGS="-C target-feature=-crt-static"
 
 # copy cargo caches - this way we don't have to redownload dependencies on subsequent builds
 RUN mkdir -p /home/node/.cargo/registry
 COPY --from=builder /home/indy/.cargo/registry /home/node/.cargo/registry
 RUN chown -R node:node /home/node/.cargo/registry
-RUN echo "Cargo registry cache: "
-RUN ls -lah /home/node/.cargo/registry
-
-USER node

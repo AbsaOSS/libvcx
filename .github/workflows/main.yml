@@ -453,7 +453,7 @@ jobs:
         run: |
           set -x
           sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" "/usr/local/lib/android" "/usr/share/dotnet"
-          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
+          docker run --rm -i --name libvcx --network host -e X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
                               bash -c '(cd $HOME/libvcx && \
                                 RUST_TEST_THREADS=1 cargo test --release --features "general_test" && \
                                 cd $HOME/agency_client && \
@@ -514,7 +514,7 @@ jobs:
       - name: Run pool integration tests
         run: |
           set -x
-          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
+          docker run --rm -i --name libvcx --network host -e X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
                               bash -c '(cd $HOME/libvcx && \
                               RUST_TEST_THREADS=1 TEST_POOL_IP=127.0.0.1 cargo test --release --features "pool_tests agency_v2")'
 
@@ -573,7 +573,7 @@ jobs:
       - name: Run agency+pool integration tests
         run: |
           set -x
-          docker run --rm -i --name libvcx --network host -e X86_64_ALPINE_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
+          docker run --rm -i --name libvcx --network host -e X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_NO_VENDOR=true $DOCKER_IMG_NAME_LIBVCX \
                               bash -c '(cd $HOME/libvcx && \
                               cargo --version && \
                               rustc --version && \
